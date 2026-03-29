@@ -7,9 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { stocks } from "@/src/entities/stock/model/mock";
+import { getStocks } from "@/src/entities/stock/api/get-stocks";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const stocks = await getStocks();
+
   return (
     <main className="py-12">
       <div className="container">
@@ -32,7 +34,7 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-semibold tracking-tight">
-                    ${stock.price.toFixed(2)}
+                    {stock.price.toFixed(2)}₽
                   </p>
                 </CardContent>
                 <CardFooter className="justify-end">

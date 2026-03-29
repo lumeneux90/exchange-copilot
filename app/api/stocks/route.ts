@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { stocks } from "@/src/entities/stock/model/mock";
-import type { Stock } from "@/src/entities/stock/model/types";
+import { getStocks } from "@/src/entities/stock/api/get-stocks";
 
 export async function GET() {
-  return NextResponse.json<Stock[]>(stocks);
+  const stocks = await getStocks();
+
+  return NextResponse.json(stocks);
 }
