@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import "./globals.css";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Stock App",
-  description: "Minimal stock application scaffold",
+  title: "Xchange Copilot",
+  description: "Данные по акциям с торгов",
 };
 
 type RootLayoutProps = Readonly<{
@@ -16,7 +13,7 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en">
       <body>{children}</body>
     </html>
   );
