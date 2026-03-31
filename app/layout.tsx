@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
+import { Providers } from "./providers";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const metadata: Metadata = {
   title: "Xchange Copilot",
@@ -13,8 +15,16 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html
+      lang="ru"
+      className="font-sans"
+      style={{ "--font-sans": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif" } as React.CSSProperties}
+    >
+      <body>
+        <Providers>
+          <TooltipProvider>{children}</TooltipProvider>
+        </Providers>
+      </body>
     </html>
   );
 }

@@ -2,7 +2,7 @@ import type { Stock } from "@/src/entities/stock/model/types";
 
 const MOEX_URL =
   "https://iss.moex.com/iss/engines/stock/markets/shares/securities.json";
-const STOCKS_LIMIT = 15;
+const DEFAULT_STOCKS_LIMIT = 15;
 
 type MoexRow = Array<string | number | null>;
 
@@ -14,6 +14,11 @@ type MoexBlock = {
 type MoexResponse = {
   securities?: MoexBlock;
   marketdata?: MoexBlock;
+};
+
+type GetStocksOptions = {
+  offset?: number;
+  limit?: number;
 };
 
 function getColumnValue(row: MoexRow, columns: string[], columnName: string) {
@@ -29,32 +34,45 @@ export function mapMoexToStock(data: {
   marketDataColumns: string[];
 }): Stock {
   const ticker = String(
-    getColumnValue(data.security, data.securityColumns, "SECID") ?? "",
+    getColumnValue(data.security, data.securityColumns, "SECID") ?? ""
   );
   const name = String(
-    getColumnValue(data.security, data.securityColumns, "SHORTNAME") ?? "",
+    getColumnValue(data.security, data.securityColumns, "SHORTNAME") ?? ""
   );
   const lastPrice = getColumnValue(
     data.marketData ?? [],
     data.marketDataColumns,
-    "LAST",
+    "LAST"
   );
   const prevPrice = getColumnValue(
     data.security,
     data.securityColumns,
-    "PREVPRICE",
+    "PREVPRICE"
   );
   const price = Number(lastPrice ?? prevPrice ?? 0);
+  const previousPrice = Number(prevPrice ?? price ?? 0);
+  const safePrice = Number.isFinite(price) ? price : 0;
+  const safePreviousPrice = Number.isFinite(previousPrice) ? previousPrice : 0;
+  const change = safePrice - safePreviousPrice;
+  const changePercent =
+    safePreviousPrice > 0 ? (change / safePreviousPrice) * 100 : 0;
 
   return {
     ticker,
     name,
-    price: Number.isFinite(price) ? price : 0,
+    price: safePrice,
+    previousPrice: safePreviousPrice,
+    change,
+    changePercent: Number.isFinite(changePercent) ? changePercent : 0,
   };
 }
 
-export async function getStocks(): Promise<Stock[]> {
+export async function getStocks(
+  options: GetStocksOptions = {}
+): Promise<Stock[]> {
   try {
+    const offset = Math.max(0, options.offset ?? 0);
+    const limit = Math.max(1, options.limit ?? DEFAULT_STOCKS_LIMIT);
     const response = await fetch(MOEX_URL, {
       next: { revalidate: 30 },
     });
@@ -73,7 +91,7 @@ export async function getStocks(): Promise<Stock[]> {
       marketDataRows.map((row) => [
         String(getColumnValue(row, marketDataColumns, "SECID") ?? ""),
         row,
-      ]),
+      ])
     );
 
     return securityRows
@@ -82,13 +100,13 @@ export async function getStocks(): Promise<Stock[]> {
           security,
           securityColumns,
           marketData: marketDataByTicker.get(
-            String(getColumnValue(security, securityColumns, "SECID") ?? ""),
+            String(getColumnValue(security, securityColumns, "SECID") ?? "")
           ),
           marketDataColumns,
-        }),
+        })
       )
       .filter((stock) => stock.ticker && stock.name)
-      .slice(0, STOCKS_LIMIT);
+      .slice(offset, offset + limit);
   } catch {
     return [];
   }
