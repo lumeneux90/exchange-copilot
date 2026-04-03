@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 
 import { NavMain } from "@/components/nav-main";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -20,7 +19,6 @@ import {
   RiCommandLine,
   RiFundsLine,
   RiLineChartLine,
-  RiSearchLine,
 } from "@remixicon/react";
 
 const data = {
@@ -46,13 +44,6 @@ const data = {
       icon: <RiBarChartBoxLine />,
     },
   ],
-  navSecondary: [
-    {
-      title: "Поиск тикеров",
-      url: "#stocks-table",
-      icon: <RiSearchLine />,
-    },
-  ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -73,7 +64,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
