@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
+import { SidebarPortfolioCard } from "@/components/portfolio/sidebar-portfolio-card";
 import {
   Sidebar,
   SidebarContent,
@@ -15,10 +16,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
-  RiBarChartBoxLine,
   RiCommandLine,
   RiFundsLine,
-  RiLineChartLine,
+  RiTimeLine,
+  RiWallet3Line,
 } from "@remixicon/react";
 
 const data = {
@@ -30,18 +31,21 @@ const data = {
   navMain: [
     {
       title: "Обзор рынка",
-      url: "#market-overview",
+      url: "/",
+      matchUrl: "/",
       icon: <RiFundsLine />,
     },
     {
-      title: "Динамика цен",
-      url: "#market-chart",
-      icon: <RiLineChartLine />,
+      title: "История",
+      url: "/history",
+      matchUrl: "/history",
+      icon: <RiTimeLine />,
     },
     {
-      title: "Биржевой список",
-      url: "#stocks-table",
-      icon: <RiBarChartBoxLine />,
+      title: "Портфель",
+      url: "/portfolio",
+      matchUrl: "/portfolio",
+      icon: <RiWallet3Line />,
     },
   ],
 };
@@ -64,6 +68,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
+        <SidebarPortfolioCard />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
