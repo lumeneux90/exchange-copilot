@@ -11,7 +11,7 @@ function getNumberParam(value: string | null, fallback: number) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const offset = getNumberParam(searchParams.get("offset"), 0);
-  const limit = getNumberParam(searchParams.get("limit"), 15);
+  const limit = getNumberParam(searchParams.get("limit"), 80);
   const stocks = await getStocks({ offset, limit });
 
   return NextResponse.json(stocks);

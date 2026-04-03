@@ -2,7 +2,7 @@ export type Stock = {
   ticker: string;
   name: string;
   price: number;
-  previousPrice: number;
+  openingPrice: number;
   change: number;
   changePercent: number;
 };

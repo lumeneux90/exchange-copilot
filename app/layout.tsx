@@ -17,10 +17,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html
       lang="ru"
+      suppressHydrationWarning
       className="font-sans"
       style={{ "--font-sans": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif" } as React.CSSProperties}
     >
-      <body>
+      <body suppressHydrationWarning>
         <Providers>
           <TooltipProvider>{children}</TooltipProvider>
         </Providers>
