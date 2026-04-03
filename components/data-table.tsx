@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { CompanyLogo } from "@/components/company-logo";
+import { TradeOrderSheet } from "@/components/trade-order-sheet";
 import type { Stock } from "@/src/entities/stock/model/types";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -59,6 +61,8 @@ const sortOptionLabels: Record<SortOption, string> = {
 
 export function DataTable({ data }: { data: Stock[] }) {
   const [sortBy, setSortBy] = React.useState<SortOption>("default");
+  const [tradeStock, setTradeStock] = React.useState<Stock | null>(null);
+  const [isTradeSheetOpen, setIsTradeSheetOpen] = React.useState(false);
 
   const sortedData = React.useMemo(() => {
     const nextData = [...data];
@@ -80,6 +84,11 @@ export function DataTable({ data }: { data: Stock[] }) {
         return nextData;
     }
   }, [data, sortBy]);
+
+  function openTradeSheet(stock: Stock) {
+    setTradeStock(stock);
+    setIsTradeSheetOpen(true);
+  }
 
   return (
     <div className="px-4 lg:px-6">
@@ -132,8 +141,29 @@ export function DataTable({ data }: { data: Stock[] }) {
           </TableHeader>
           <TableBody>
             {sortedData.map((stock) => (
-              <TableRow key={stock.ticker}>
-                <TableCell className="font-medium">{stock.ticker}</TableCell>
+              <TableRow
+                key={stock.ticker}
+                className="cursor-pointer"
+                tabIndex={0}
+                aria-label={`Открыть сделку по ${stock.ticker}`}
+                onClick={() => openTradeSheet(stock)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openTradeSheet(stock);
+                  }
+                }}
+              >
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <CompanyLogo
+                      ticker={stock.ticker}
+                      name={stock.name}
+                      className="size-8 rounded-md"
+                    />
+                    <span className="font-medium">{stock.ticker}</span>
+                  </div>
+                </TableCell>
                 <TableCell className="max-w-[320px] truncate">
                   {stock.name}
                 </TableCell>
@@ -153,6 +183,12 @@ export function DataTable({ data }: { data: Stock[] }) {
           </TableBody>
         </Table>
       </div>
+      <TradeOrderSheet
+        stock={tradeStock}
+        open={isTradeSheetOpen}
+        onOpenChange={setIsTradeSheetOpen}
+        showTrigger={false}
+      />
     </div>
   );
 }

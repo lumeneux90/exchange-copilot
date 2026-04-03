@@ -10,20 +10,9 @@ import {
   getRangeChangeClass,
   rangeLabels,
 } from "@/components/chart-area-interactive.helpers";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { cn } from "@/src/lib/utils";
 
 type ChartSummaryCardsProps = {
-  selectedStock: {
-    ticker: string;
-    name: string;
-  } | null;
   range: CandleRange;
   latestPrice: number | null;
   periodOpenPrice: number | null;
@@ -31,8 +20,26 @@ type ChartSummaryCardsProps = {
   totalVolume: number | null;
 };
 
+function Metric({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-md border border-dashed px-3 py-2">
+      <span className="text-muted-foreground shrink-0 text-xs">{label}</span>
+      <span className={cn("truncate text-sm font-medium", className)}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export function ChartSummaryCards({
-  selectedStock,
   range,
   latestPrice,
   periodOpenPrice,
@@ -40,59 +47,36 @@ export function ChartSummaryCards({
   totalVolume,
 }: ChartSummaryCardsProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <Card size="sm">
-        <CardHeader className="gap-0.5">
-          <CardDescription>Выбранная бумага</CardDescription>
-          <CardTitle className="text-lg font-semibold">
-            {selectedStock?.ticker ?? "n/a"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-muted-foreground truncate text-sm">
-            {selectedStock?.name ?? "Нет данных"}
-          </div>
-        </CardContent>
-      </Card>
-      <Card size="sm">
-        <CardHeader className="gap-0.5">
-          <CardDescription>
-            Последняя цена за {rangeLabels[range].toLowerCase()}
-          </CardDescription>
-          <CardTitle className="text-lg font-semibold">
-            {latestPrice !== null ? formatPrice(latestPrice) : "Нет данных"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-muted-foreground text-sm">
-            Открытие:{" "}
-            {periodOpenPrice !== null ? formatPrice(periodOpenPrice) : "n/a"}
-          </div>
-        </CardContent>
-      </Card>
-      <Card size="sm">
-        <CardHeader className="gap-0.5">
-          <CardDescription>Изменение за период</CardDescription>
-          <CardTitle
-            className={cn(
-              "flex items-center gap-1 text-lg font-semibold",
-              getRangeChangeClass(rangeChange)
-            )}
-          >
+    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+      <Metric
+        label="Последняя цена"
+        value={latestPrice !== null ? formatPrice(latestPrice) : "Нет данных"}
+      />
+      <Metric
+        label="Открытие"
+        value={
+          periodOpenPrice !== null ? formatPrice(periodOpenPrice) : "Нет данных"
+        }
+      />
+      <Metric
+        label="Изм."
+        value={
+          <span className="inline-flex items-center gap-1">
             {rangeChange >= 0 ? (
               <RiArrowUpLine className="size-4" />
             ) : (
               <RiArrowDownLine className="size-4" />
             )}
             {formatPercent(rangeChange)}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-muted-foreground text-sm">
-            Объём: {totalVolume !== null ? formatVolume(totalVolume) : "n/a"}
-          </div>
-        </CardContent>
-      </Card>
+          </span>
+        }
+        className={getRangeChangeClass(rangeChange)}
+      />
+      <Metric
+        label="Объем"
+        value={totalVolume !== null ? formatVolume(totalVolume) : "Нет данных"}
+      />
+      <Metric label="Период" value={rangeLabels[range]} />
     </div>
   );
 }

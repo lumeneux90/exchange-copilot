@@ -6,6 +6,7 @@ import {
   RiArrowDownLine,
   RiExchangeFundsLine,
   RiArrowUpDownLine,
+  RiStarLine,
 } from "@remixicon/react";
 
 import type { Stock } from "@/src/entities/stock/model/types";
@@ -23,6 +24,8 @@ import {
   rangeLabels,
 } from "@/components/chart-area-interactive.helpers";
 import { ChartSummaryCards } from "@/components/chart-summary-cards";
+import { CompanyLogo } from "@/components/company-logo";
+import { TradeOrderSheet } from "@/components/trade-order-sheet";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -147,28 +150,40 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
 
   return (
     <Card className="@container/card">
-      <CardHeader className="gap-4 border-b">
-        <div className="space-y-1">
-          <CardTitle className="text-base font-medium">
-            Динамика акций
-          </CardTitle>
+      <CardHeader className="items-center gap-3 border-b pb-2">
+        <div className="flex min-w-0 items-center gap-3 self-center">
+          {selectedStock ? (
+            <CompanyLogo
+              ticker={selectedStock.ticker}
+              name={selectedStock.name}
+              className="size-9 rounded-lg"
+            />
+          ) : null}
+          <div className="min-w-0">
+            <CardTitle className="text-base leading-none font-medium">
+              {selectedStock.name}
+            </CardTitle>
+            <div className="text-muted-foreground mt-1 truncate text-sm">
+              {selectedStock ? `${selectedStock.ticker}` : "Выберите тикер"}
+            </div>
+          </div>
         </div>
-        <CardAction className="col-start-1 row-start-2 w-full justify-self-stretch @[920px]/card:col-start-2 @[920px]/card:row-start-1 @[920px]/card:w-auto">
+        <CardAction className="col-start-1 row-start-2 w-full self-center justify-self-stretch @[920px]/card:col-start-2 @[920px]/card:row-start-1 @[920px]/card:w-auto">
           <div className="flex flex-col gap-3 @[920px]/card:items-end">
-            <div className="flex w-full flex-col gap-3 @[920px]/card:w-auto @[920px]/card:flex-row @[920px]/card:items-start @[920px]/card:justify-end">
+            <div className="flex w-full flex-col gap-3 @[920px]/card:w-auto @[920px]/card:flex-row @[920px]/card:items-center @[920px]/card:justify-end">
               <Popover open={isTickerOpen} onOpenChange={setIsTickerOpen}>
                 <PopoverTrigger
                   render={
                     <Button
                       variant="outline"
-                      className="w-full justify-between @[920px]/card:w-[26rem]"
+                      className="h-8 w-full justify-between @[920px]/card:w-[26rem]"
                     />
                   }
                 >
                   <span className="truncate">
                     {selectedStock
                       ? `${selectedStock.ticker} · ${selectedStock.name}`
-                      : "Выберите тикер"}
+                      : "Выбрать компанию"}
                   </span>
                   <RiArrowUpDownLine data-icon="inline-end" />
                 </PopoverTrigger>
@@ -198,12 +213,21 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
                               )}
                             />
                             <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                              <span className="font-medium">
-                                {stock.ticker}
-                              </span>
-                              <span className="text-muted-foreground truncate text-xs">
-                                {stock.name}
-                              </span>
+                              <div className="flex min-w-0 items-center gap-3">
+                                <CompanyLogo
+                                  ticker={stock.ticker}
+                                  name={stock.name}
+                                  className="size-7 rounded-md"
+                                />
+                                <div className="min-w-0">
+                                  <div className="font-medium">
+                                    {stock.ticker}
+                                  </div>
+                                  <div className="text-muted-foreground truncate text-xs">
+                                    {stock.name}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </CommandItem>
                         ))}
@@ -233,29 +257,36 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
+              <TradeOrderSheet
+                stock={selectedStock}
+                triggerClassName="h-8 shrink-0 text-sm"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8 shrink-0"
+                aria-label={
+                  selectedStock
+                    ? `Следить за ${selectedStock.ticker}`
+                    : "Следить за бумагой"
+                }
+                disabled
+              >
+                <RiStarLine />
+              </Button>
             </div>
           </div>
         </CardAction>
       </CardHeader>
 
-      <CardContent className="space-y-5 px-4 pt-5 sm:px-6">
-        <div className="grid gap-3 md:grid-cols-[1.35fr_0.65fr]">
-          <ChartSummaryCards
-            selectedStock={selectedStock}
-            range={range}
-            latestPrice={latestCandle?.close ?? null}
-            periodOpenPrice={firstCandle?.open ?? null}
-            rangeChange={rangeChange}
-            totalVolume={candles.length ? totalVolume : null}
-          />
-
-          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1">
-            <Button className="h-10 text-sm">Купить</Button>
-            <Button variant="destructive" className="h-10 text-sm">
-              Продать
-            </Button>
-          </div>
-        </div>
+      <CardContent className="space-y-5 px-4 pt-4 sm:px-6">
+        <ChartSummaryCards
+          range={range}
+          latestPrice={latestCandle?.close ?? null}
+          periodOpenPrice={firstCandle?.open ?? null}
+          rangeChange={rangeChange}
+          totalVolume={candles.length ? totalVolume : null}
+        />
 
         {showLoadingState ? (
           <div className="text-muted-foreground flex h-[320px] w-full flex-col items-center justify-center gap-3 text-sm">
@@ -341,10 +372,10 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
                     formatter={(value) => {
                       return (
                         <div className="flex w-full items-center justify-between gap-3">
-                          <span className="block leading-none text-muted-foreground">
+                          <span className="text-muted-foreground block leading-none">
                             Цена
                           </span>
-                          <span className="block leading-none text-right font-mono tabular-nums">
+                          <span className="block text-right font-mono leading-none tabular-nums">
                             {formatPrice(Number(value))}
                           </span>
                         </div>
