@@ -16,12 +16,16 @@ import { cn } from "@/src/lib/utils";
 
 type MarketSummary = {
   averageChangePercent: number;
-  averagePrice: number;
   gainers: number;
   losers: number;
+  moexIndexChangePercent: number;
+  moexIndexLabel: string;
+  moexIndexValue: number;
+  strongestGainerChangePercent: number;
+  strongestGainerLabel: string;
+  strongestLoserChangePercent: number;
+  strongestLoserLabel: string;
   totalStocks: number;
-  topMoverChangePercent: number;
-  topMoverLabel: string;
 };
 
 type TrendDirection = "positive" | "negative" | "neutral";
@@ -32,8 +36,8 @@ function formatPercent(value: number) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
-function formatPrice(value: number) {
-  return `${value.toFixed(2)} RUB`;
+function formatIndexValue(value: number) {
+  return value > 0 ? value.toFixed(2) : "—";
 }
 
 function getTrendDirection(value: number): TrendDirection {
@@ -143,27 +147,33 @@ export function SectionCards({ summary }: { summary: MarketSummary }) {
   const averageChangeDirection = getTrendDirection(
     summary.averageChangePercent
   );
-  const topMoverDirection = getTrendDirection(summary.topMoverChangePercent);
+  const moexIndexDirection = getTrendDirection(summary.moexIndexChangePercent);
+  const strongestGainerDirection = getTrendDirection(
+    summary.strongestGainerChangePercent
+  );
+  const strongestLoserDirection = getTrendDirection(
+    summary.strongestLoserChangePercent
+  );
 
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Средняя цена</CardDescription>
+          <CardDescription>IMOEX</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {formatPrice(summary.averagePrice)}
+            {formatIndexValue(summary.moexIndexValue)}
           </CardTitle>
-          <CardAction className="row-span-1 self-center">
-            <div className="text-muted-foreground text-xs font-medium">
-              {summary.totalStocks} бумаг
-            </div>
+          <CardAction>
+            <TrendValueBadge
+              direction={moexIndexDirection}
+              value={summary.moexIndexChangePercent}
+            />
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="font-medium">Срез по крупнейшим компаниям MOEX</div>
+          <div className="font-medium">Индекс Мосбиржи</div>
           <div className="text-muted-foreground">
-            Средняя цена из {summary.totalStocks} крупнейших на Мосбирже
-            компаний по капитализации
+            Официальный ориентир по российскому рынку акций
           </div>
         </CardFooter>
       </Card>
@@ -195,34 +205,40 @@ export function SectionCards({ summary }: { summary: MarketSummary }) {
 
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Лидеры роста</CardDescription>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {summary.gainers}
+          <CardDescription>Сильнейший рост</CardDescription>
+          <CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl">
+            {summary.strongestGainerLabel}
           </CardTitle>
+          <CardAction>
+            <TrendValueBadge
+              direction={strongestGainerDirection}
+              value={summary.strongestGainerChangePercent}
+            />
+          </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="font-medium">Бумаги с положительной динамикой</div>
+          <div className="font-medium">Лучшая бумага в выборке сегодня</div>
           <div className="text-muted-foreground">
-            Количество акций выше цены открытия
+            По относительному изменению к цене открытия
           </div>
         </CardFooter>
       </Card>
 
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Самый сильный сдвиг</CardDescription>
+          <CardDescription>Сильнейшее падение</CardDescription>
           <CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl">
-            {summary.topMoverLabel}
+            {summary.strongestLoserLabel}
           </CardTitle>
           <CardAction>
             <TrendValueBadge
-              direction={topMoverDirection}
-              value={summary.topMoverChangePercent}
+              direction={strongestLoserDirection}
+              value={summary.strongestLoserChangePercent}
             />
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="font-medium">Наибольшее изменение в выборке</div>
+          <div className="font-medium">Слабейшая бумага в выборке сегодня</div>
           <div className="text-muted-foreground">
             По относительному изменению к цене открытия
           </div>

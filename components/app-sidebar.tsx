@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 
 import { NavMain } from "@/components/nav-main";
+import { SidebarFxTradeCard } from "@/components/portfolio/sidebar-fx-trade-card";
+import { SidebarWatchlistCard } from "@/components/portfolio/sidebar-watchlist-card";
 import { NavUser } from "@/components/nav-user";
 import { SidebarPortfolioCard } from "@/components/portfolio/sidebar-portfolio-card";
 import {
@@ -21,6 +23,8 @@ import {
   RiTimeLine,
   RiWallet3Line,
 } from "@remixicon/react";
+import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
+import type { Stock } from "@/src/entities/stock/model/types";
 
 const data = {
   user: {
@@ -50,7 +54,14 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  currencyRates,
+  stocks,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  currencyRates: CurrencyRate[];
+  stocks: Stock[];
+}) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -68,7 +79,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <SidebarPortfolioCard />
+        <SidebarPortfolioCard currencyRates={currencyRates} stocks={stocks} />
+        <SidebarWatchlistCard stocks={stocks} />
+        <SidebarFxTradeCard currencyRates={currencyRates} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
