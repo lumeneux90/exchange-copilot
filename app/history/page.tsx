@@ -6,11 +6,18 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { getCurrencyRates } from "@/src/entities/market/api/get-currency-rates";
+import { getStocks } from "@/src/entities/stock/api/get-stocks";
 import { RiTimeLine } from "@remixicon/react";
 
-export default function HistoryPage() {
+export default async function HistoryPage() {
+  const [stocks, currencyRates] = await Promise.all([
+    getStocks(),
+    getCurrencyRates(),
+  ]);
+
   return (
-    <DashboardShell title="История">
+    <DashboardShell title="История" currencyRates={currencyRates} stocks={stocks}>
       <section className="px-4 lg:px-6">
         <Empty className="min-h-[24rem] border">
           <EmptyHeader>

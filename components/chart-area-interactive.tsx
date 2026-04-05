@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   RiArrowDownLine,
   RiExchangeFundsLine,
   RiArrowUpDownLine,
   RiStarLine,
+  RiStarFill,
 } from "@remixicon/react";
 
 import type { Stock } from "@/src/entities/stock/model/types";
@@ -63,10 +65,14 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/src/lib/utils";
+import { useWatchlist } from "@/src/features/watchlist/model/watchlist-context";
 
 type CandleRequestState = "loading" | "success" | "error";
 
 export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
+  const searchParams = useSearchParams();
+  const { isInWatchlist, tickers, toggleTicker } = useWatchlist();
+  const requestedTicker = searchParams.get("ticker")?.trim().toUpperCase() ?? "";
   const [selectedTicker, setSelectedTicker] = React.useState(
     stocks[0]?.ticker ?? ""
   );
@@ -76,16 +82,30 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
   const [requestState, setRequestState] = React.useState<CandleRequestState>(
     selectedTicker ? "loading" : "success"
   );
+  const lastAppliedRequestedTicker = React.useRef("");
 
   React.useEffect(() => {
     if (!stocks.length) {
       return;
     }
 
+    const requestedStock = requestedTicker
+      ? stocks.find((stock) => stock.ticker === requestedTicker)
+      : null;
+
+    if (
+      requestedStock &&
+      requestedStock.ticker !== lastAppliedRequestedTicker.current
+    ) {
+      lastAppliedRequestedTicker.current = requestedStock.ticker;
+      setSelectedTicker(requestedStock.ticker);
+      return;
+    }
+
     if (!selectedTicker) {
       setSelectedTicker(stocks[0].ticker);
     }
-  }, [stocks, selectedTicker]);
+  }, [requestedTicker, selectedTicker, stocks]);
 
   React.useEffect(() => {
     let isCancelled = false;
@@ -133,6 +153,25 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
     stocks.find((stock) => stock.ticker === selectedTicker) ??
     stocks[0] ??
     null;
+  const orderedStocks = React.useMemo(() => {
+    if (!tickers.length) {
+      return stocks;
+    }
+
+    const watchlistSet = new Set(tickers);
+    const watchlistStocks = stocks.filter((stock) => watchlistSet.has(stock.ticker));
+    const otherStocks = stocks.filter((stock) => !watchlistSet.has(stock.ticker));
+
+    return [...watchlistStocks, ...otherStocks];
+  }, [stocks, tickers]);
+  const watchlistStocks = React.useMemo(
+    () => orderedStocks.filter((stock) => tickers.includes(stock.ticker)),
+    [orderedStocks, tickers]
+  );
+  const otherStocks = React.useMemo(
+    () => orderedStocks.filter((stock) => !tickers.includes(stock.ticker)),
+    [orderedStocks, tickers]
+  );
 
   const chartData = React.useMemo(() => buildChartData(candles), [candles]);
 
@@ -152,6 +191,29 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
     <Card className="@container/card">
       <CardHeader className="items-center gap-3 border-b pb-2">
         <div className="flex min-w-0 items-center gap-3 self-center">
+          {selectedStock ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "text-muted-foreground hover:text-foreground size-7 shrink-0 bg-transparent shadow-none",
+                isInWatchlist(selectedStock.ticker) &&
+                  "text-amber-500 hover:text-amber-500"
+              )}
+              aria-label={
+                isInWatchlist(selectedStock.ticker)
+                  ? `Убрать ${selectedStock.ticker} из watchlist`
+                  : `Добавить ${selectedStock.ticker} в watchlist`
+              }
+              onClick={() => toggleTicker(selectedStock.ticker)}
+            >
+              {isInWatchlist(selectedStock.ticker) ? (
+                <RiStarFill className="size-5" />
+              ) : (
+                <RiStarLine className="size-5" />
+              )}
+            </Button>
+          ) : null}
           {selectedStock ? (
             <CompanyLogo
               ticker={selectedStock.ticker}
@@ -192,8 +254,51 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
                     <CommandInput placeholder="Найти тикер или компанию" />
                     <CommandList>
                       <CommandEmpty>Ничего не найдено</CommandEmpty>
-                      <CommandGroup heading="Тикеры">
-                        {stocks.map((stock) => (
+                      {watchlistStocks.length > 0 ? (
+                        <CommandGroup heading="Watchlist">
+                          {watchlistStocks.map((stock) => (
+                            <CommandItem
+                              key={stock.ticker}
+                              value={`${stock.ticker} ${stock.name}`}
+                              keywords={[stock.ticker, stock.name]}
+                              onSelect={() => {
+                                React.startTransition(() => {
+                                  setSelectedTicker(stock.ticker);
+                                  setIsTickerOpen(false);
+                                });
+                              }}
+                            >
+                              <RiCheckLine
+                                className={cn(
+                                  selectedTicker === stock.ticker
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <CompanyLogo
+                                    ticker={stock.ticker}
+                                    name={stock.name}
+                                    className="size-7 rounded-md"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="font-medium">
+                                      {stock.ticker}
+                                    </div>
+                                    <div className="text-muted-foreground truncate text-xs">
+                                      {stock.name}
+                                    </div>
+                                  </div>
+                                </div>
+                                <RiStarFill className="text-amber-500" />
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      ) : null}
+                      <CommandGroup heading={watchlistStocks.length ? "Все тикеры" : "Тикеры"}>
+                        {otherStocks.map((stock) => (
                           <CommandItem
                             key={stock.ticker}
                             value={`${stock.ticker} ${stock.name}`}
@@ -252,7 +357,11 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
                 className="flex-wrap justify-start @[920px]/card:flex-nowrap @[920px]/card:justify-end"
               >
                 {Object.entries(rangeLabels).map(([key, label]) => (
-                  <ToggleGroupItem key={key} value={key}>
+                  <ToggleGroupItem
+                    key={key}
+                    value={key}
+                    className="aria-pressed:bg-primary aria-pressed:text-primary-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground hover:aria-pressed:bg-primary/90 hover:data-[state=on]:bg-primary/90"
+                  >
                     {label}
                   </ToggleGroupItem>
                 ))}
@@ -261,19 +370,6 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
                 stock={selectedStock}
                 triggerClassName="h-8 shrink-0 text-sm"
               />
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-8 shrink-0"
-                aria-label={
-                  selectedStock
-                    ? `Следить за ${selectedStock.ticker}`
-                    : "Следить за бумагой"
-                }
-                disabled
-              >
-                <RiStarLine />
-              </Button>
             </div>
           </div>
         </CardAction>
