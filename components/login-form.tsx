@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   RiArrowRightLine,
   RiBarChartBoxLine,
@@ -33,6 +34,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { Spinner } from "@/components/ui/spinner";
 
 type LoginFormProps = React.ComponentProps<"div">;
 
@@ -56,13 +58,69 @@ const productHighlights = [
 ];
 
 export function LoginForm({ className, ...props }: LoginFormProps) {
+  const router = useRouter();
   const [isOtpVisible, setIsOtpVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (isOtpVisible) {
+      setErrorMessage(
+        "OTP-вход пока доступен только как UI-сценарий. Для входа используйте логин и пароль."
+      );
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    const formData = new FormData(event.currentTarget);
+    const payload = {
+      login: String(formData.get("login") ?? ""),
+      password: String(formData.get("password") ?? ""),
+    };
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json().catch(() => null)) as
+        | { message?: string }
+        | null;
+
+      if (!response.ok) {
+        setErrorMessage(data?.message ?? "Не удалось выполнить вход.");
+        return;
+      }
+
+      startTransition(() => {
+        router.push("/");
+        router.refresh();
+      });
+    } catch {
+      setErrorMessage("Не удалось выполнить вход. Проверьте соединение и попробуйте снова.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className={className} {...props}>
       <Card className="border-border/60 bg-card/95 shadow-primary/5 overflow-hidden p-0 shadow-xl backdrop-blur">
         <CardContent className="grid p-0 lg:grid-cols-[1.05fr_0.95fr]">
-          <form className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
+          <form
+            className="flex flex-col justify-center p-6 sm:p-8 lg:p-10"
+            onSubmit={handleSubmit}
+          >
             <FieldGroup className="gap-5">
               <div className="flex flex-col gap-4 text-left">
                 <div className="text-primary flex items-center gap-3 text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -84,10 +142,12 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                 <FieldLabel htmlFor="login">Логин</FieldLabel>
                 <Input
                   id="login"
+                  name="login"
                   type="text"
                   placeholder="trader_admin"
                   autoComplete="username"
                   className="h-11 text-sm"
+                  disabled={isSubmitting}
                   required
                 />
               </Field>
@@ -125,22 +185,42 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                 ) : (
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     autoComplete="current-password"
                     className="h-11 text-sm"
+                    disabled={isSubmitting}
                     required
                   />
                 )}
               </Field>
+
+              {errorMessage ? (
+                <Field>
+                  <FieldDescription className="text-destructive">
+                    {errorMessage}
+                  </FieldDescription>
+                </Field>
+              ) : null}
 
               <Field>
                 <Button
                   type="submit"
                   size="lg"
                   className="h-11 w-full justify-center text-sm"
+                  disabled={isSubmitting}
                 >
-                  Войти в систему
-                  <RiArrowRightLine data-icon="inline-end" />
+                  {isSubmitting ? (
+                    <>
+                      <Spinner data-icon="inline-start" />
+                      Выполняем вход
+                    </>
+                  ) : (
+                    <>
+                      Войти в систему
+                      <RiArrowRightLine data-icon="inline-end" />
+                    </>
+                  )}
                 </Button>
               </Field>
 
@@ -152,6 +232,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   type="button"
                   size="lg"
                   className="h-11 w-full text-sm"
+                  disabled={isSubmitting}
                   onClick={() => setIsOtpVisible((current) => !current)}
                 >
                   <RiKey2Line data-icon="inline-start" />

@@ -1,10 +1,13 @@
+import { cookies } from "next/headers";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
+import { getSessionWithUser } from "@/src/lib/auth";
+import { SESSION_COOKIE_NAME } from "@/src/lib/auth-config";
 
-export function DashboardShell({
+export async function DashboardShell({
   currencyRates = [],
   children,
   stocks = [],
@@ -15,6 +18,14 @@ export function DashboardShell({
   stocks?: Stock[];
   title: string;
 }) {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const session = sessionId ? await getSessionWithUser(sessionId) : null;
+  const user = {
+    login: session?.user.login ?? "unknown",
+    statusLabel: "Онлайн",
+  };
+
   return (
     <SidebarProvider
       style={
@@ -24,7 +35,12 @@ export function DashboardShell({
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" currencyRates={currencyRates} stocks={stocks} />
+      <AppSidebar
+        variant="inset"
+        currencyRates={currencyRates}
+        stocks={stocks}
+        user={user}
+      />
       <SidebarInset>
         <SiteHeader title={title} />
         <div className="flex flex-1 flex-col">

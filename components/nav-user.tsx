@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -17,22 +19,33 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  RiMore2Line,
-  RiUserLine,
   RiBankCardLine,
   RiLogoutBoxLine,
+  RiMore2Line,
 } from "@remixicon/react";
+import { getUserInitials } from "@/src/lib/user";
 
 export function NavUser({
   user,
 }: {
   user: {
-    name: string;
-    email: string;
-    avatar: string;
+    login: string;
+    statusLabel: string;
   };
 }) {
+  const router = useRouter();
   const { isMobile } = useSidebar();
+  const initials = getUserInitials(user.login);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+    });
+
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -43,13 +56,13 @@ export function NavUser({
             }
           >
             <Avatar className="size-8 rounded-lg grayscale">
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+              <AvatarImage src="" alt={user.login} />
+              <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.name}</span>
-              <span className="text-foreground/70 truncate text-xs">
-                {user.email}
+              <span className="truncate font-medium">{user.login}</span>
+              <span className="text-primary truncate text-xs font-medium">
+                {user.statusLabel}
               </span>
             </div>
             <RiMore2Line className="ml-auto size-4" />
@@ -64,33 +77,33 @@ export function NavUser({
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                   <Avatar className="size-8">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="rounded-lg">VT</AvatarFallback>
+                    <AvatarImage src="" alt={user.login} />
+                    <AvatarFallback className="rounded-lg">
+                      {initials}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
-                    <span className="text-muted-foreground truncate text-xs">
-                      {user.email}
+                    <span className="truncate font-medium">{user.login}</span>
+                    <span className="text-primary truncate text-xs font-medium">
+                      {user.statusLabel}
                     </span>
                   </div>
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <RiUserLine />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <RiBankCardLine />
-                Billing
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
+            <DropdownMenuItem disabled>
+              <RiBankCardLine />
+              Billing
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              className="hover:text-destructive data-highlighted:text-destructive focus:text-destructive [&_svg]:text-destructive data-highlighted:[&_svg]:text-destructive focus:[&_svg]:text-destructive"
+              onClick={handleLogout}
+            >
               <RiLogoutBoxLine />
-              Log out
+              Выйти
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
