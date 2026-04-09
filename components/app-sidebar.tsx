@@ -27,11 +27,6 @@ import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates"
 import type { Stock } from "@/src/entities/stock/model/types";
 
 const data = {
-  user: {
-    name: "MOEX Stream",
-    email: "market@exchange.local",
-    avatar: "",
-  },
   navMain: [
     {
       title: "Обзор рынка",
@@ -57,10 +52,15 @@ const data = {
 export function AppSidebar({
   currencyRates,
   stocks,
+  user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   currencyRates: CurrencyRate[];
   stocks: Stock[];
+  user: {
+    login: string;
+    statusLabel: string;
+  };
 }) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -84,7 +84,7 @@ export function AppSidebar({
         <SidebarFxTradeCard currencyRates={currencyRates} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   );
