@@ -34,14 +34,23 @@ enum PortfolioPositionType {
   CURRENCY
 }
 
+enum PortfolioTransactionType {
+  DEPOSIT
+  BUY
+  SELL
+  FX_BUY
+  FX_SELL
+}
+
 model Portfolio {
-  id          String              @id @default(cuid())
-  userId      String              @unique @map("user_id")
-  cashBalance Decimal             @default(0) @map("cash_balance") @db.Decimal(20, 8)
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @updatedAt @map("updated_at")
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  positions   PortfolioPosition[]
+  id           String                 @id @default(cuid())
+  userId       String                 @unique @map("user_id")
+  cashBalance  Decimal                @default(0) @map("cash_balance") @db.Decimal(20, 8)
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions    PortfolioPosition[]
+  transactions PortfolioTransaction[]
 
   @@map("portfolios")
 }
@@ -64,4 +73,23 @@ model PortfolioPosition {
   @@unique([portfolioId, ticker])
   @@unique([portfolioId, currencyCode])
   @@map("portfolio_positions")
+}
+
+model PortfolioTransaction {
+  id           String                   @id @default(cuid())
+  portfolioId  String                   @map("portfolio_id")
+  type         PortfolioTransactionType
+  ticker       String?
+  currencyCode String?                  @map("currency_code")
+  quantity     Decimal?                 @db.Decimal(20, 8)
+  price        Decimal?                 @db.Decimal(20, 8)
+  amount       Decimal                  @db.Decimal(20, 8)
+  feeAmount    Decimal                  @default(0) @map("fee_amount") @db.Decimal(20, 8)
+  executedAt   DateTime                 @default(now()) @map("executed_at")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  portfolio    Portfolio                @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, executedAt(sort: Desc)])
+  @@index([portfolioId, type, executedAt(sort: Desc)])
+  @@map("portfolio_transactions")
 }

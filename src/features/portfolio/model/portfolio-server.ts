@@ -2,6 +2,7 @@ import "server-only";
 
 import { Prisma, type PrismaClient } from "@prisma/client";
 
+import type { PortfolioHistoryItem } from "@/src/features/portfolio/model/history";
 import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
 import { prisma } from "@/src/lib/db";
 import type { PortfolioState } from "@/src/features/portfolio/model/types";
@@ -19,6 +20,32 @@ function toNumber(value: Prisma.Decimal | number | null | undefined) {
 
 function toDecimal(value: number) {
   return new Prisma.Decimal(value.toFixed(DECIMAL_SCALE));
+}
+
+function mapPortfolioTransaction(
+  transaction: {
+    id: string;
+    type: "DEPOSIT" | "BUY" | "SELL" | "FX_BUY" | "FX_SELL";
+    ticker: string | null;
+    currencyCode: string | null;
+    quantity: Prisma.Decimal | null;
+    price: Prisma.Decimal | null;
+    amount: Prisma.Decimal;
+    feeAmount: Prisma.Decimal;
+    executedAt: Date;
+  }
+): PortfolioHistoryItem {
+  return {
+    id: transaction.id,
+    type: transaction.type,
+    ticker: transaction.ticker,
+    currencyCode: transaction.currencyCode,
+    quantity: transaction.quantity == null ? null : toNumber(transaction.quantity),
+    price: transaction.price == null ? null : toNumber(transaction.price),
+    amount: toNumber(transaction.amount),
+    feeAmount: toNumber(transaction.feeAmount),
+    executedAt: transaction.executedAt.toISOString(),
+  };
 }
 
 function mapPortfolioState(portfolio: {
@@ -88,6 +115,18 @@ export async function getPortfolioState(userId: string) {
   return mapPortfolioState(portfolio);
 }
 
+export async function getPortfolioHistory(userId: string) {
+  const portfolio = await getOrCreatePortfolioRecord(prisma, userId);
+  const transactions = await prisma.portfolioTransaction.findMany({
+    where: {
+      portfolioId: portfolio.id,
+    },
+    orderBy: [{ executedAt: "desc" }, { createdAt: "desc" }],
+  });
+
+  return transactions.map(mapPortfolioTransaction);
+}
+
 export async function depositFunds(params: {
   userId: string;
   amount: number;
@@ -100,6 +139,14 @@ export async function depositFunds(params: {
 
   const portfolio = await prisma.$transaction(async (tx) => {
     const currentPortfolio = await getOrCreatePortfolioRecord(tx, userId);
+
+    await tx.portfolioTransaction.create({
+      data: {
+        portfolioId: currentPortfolio.id,
+        type: "DEPOSIT",
+        amount: toDecimal(amount),
+      },
+    });
 
     return tx.portfolio.update({
       where: { id: currentPortfolio.id },
@@ -195,6 +242,18 @@ export async function tradeCurrency(params: {
           },
         },
       });
+
+      await tx.portfolioTransaction.create({
+        data: {
+          portfolioId: currentPortfolio.id,
+          type: "FX_BUY",
+          currencyCode: normalizedCode,
+          quantity: toDecimal(fxQuantity),
+          price: toDecimal(rate),
+          amount: toDecimal(rubAmount),
+          feeAmount: toDecimal(fee),
+        },
+      });
     } else {
       const fxQuantity = amount;
       const rubAmount = amount * rate;
@@ -231,6 +290,18 @@ export async function tradeCurrency(params: {
           cashBalance: {
             increment: toDecimal(netRubAmount),
           },
+        },
+      });
+
+      await tx.portfolioTransaction.create({
+        data: {
+          portfolioId: currentPortfolio.id,
+          type: "FX_SELL",
+          currencyCode: normalizedCode,
+          quantity: toDecimal(fxQuantity),
+          price: toDecimal(rate),
+          amount: toDecimal(rubAmount),
+          feeAmount: toDecimal(fee),
         },
       });
     }
@@ -327,6 +398,18 @@ export async function tradeStock(params: {
           },
         },
       });
+
+      await tx.portfolioTransaction.create({
+        data: {
+          portfolioId: currentPortfolio.id,
+          type: "BUY",
+          ticker: normalizedTicker,
+          quantity: toDecimal(quantity),
+          price: toDecimal(price),
+          amount: toDecimal(quantity * price),
+          feeAmount: toDecimal(fee),
+        },
+      });
     } else {
       const proceeds = quantity * price - fee;
 
@@ -357,6 +440,18 @@ export async function tradeStock(params: {
           cashBalance: {
             increment: toDecimal(proceeds),
           },
+        },
+      });
+
+      await tx.portfolioTransaction.create({
+        data: {
+          portfolioId: currentPortfolio.id,
+          type: "SELL",
+          ticker: normalizedTicker,
+          quantity: toDecimal(quantity),
+          price: toDecimal(price),
+          amount: toDecimal(quantity * price),
+          feeAmount: toDecimal(fee),
         },
       });
     }
