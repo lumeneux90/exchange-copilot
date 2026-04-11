@@ -4,54 +4,37 @@ import * as React from "react";
 
 import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
-
-export type PortfolioHolding = {
-  ticker: string;
-  quantity: number;
-  averagePrice: number;
-};
-
-export type PortfolioCurrencyBalance = {
-  code: string;
-  quantity: number;
-  averageRate: number;
-};
-
-export type PortfolioTransactionType =
-  | "deposit"
-  | "buy"
-  | "sell"
-  | "fx-buy"
-  | "fx-sell";
-
-export type PortfolioTransaction = {
-  id: string;
-  type: PortfolioTransactionType;
-  amount: number;
-  ticker?: string;
-  currencyCode?: string;
-  quantity?: number;
-  price?: number;
-  createdAt: string;
-  note?: string;
-};
-
-type PortfolioState = {
-  cashBalance: number;
-  currencies: PortfolioCurrencyBalance[];
-  holdings: PortfolioHolding[];
-  transactions: PortfolioTransaction[];
-};
+import {
+  depositFundsAction,
+  getPortfolioStateAction,
+  tradeCurrencyAction,
+  tradeStockAction,
+} from "@/src/features/portfolio/model/actions";
+import {
+  emptyPortfolioState,
+  type PortfolioCurrencyBalance,
+  type PortfolioHolding,
+  type PortfolioState,
+} from "@/src/features/portfolio/model/types";
 
 type PortfolioContextValue = {
   portfolio: PortfolioState;
-  depositFunds: (amount: number, note?: string) => void;
+  isPending: boolean;
+  refreshPortfolio: () => Promise<void>;
+  depositFunds: (amount: number) => Promise<boolean>;
   tradeCurrency: (params: {
     code: string;
     side: "buy" | "sell";
     amount: number;
     rate: number;
-  }) => boolean;
+  }) => Promise<boolean>;
+  tradeStock: (params: {
+    ticker: string;
+    side: "buy" | "sell";
+    quantity: number;
+    price: number;
+    fee?: number;
+  }) => Promise<boolean>;
 };
 
 type PortfolioHoldingSnapshot = PortfolioHolding & {
@@ -84,109 +67,9 @@ export type PortfolioSnapshot = {
   holdings: PortfolioHoldingSnapshot[];
 };
 
-const STORAGE_KEY = "xchange-copilot-portfolio";
-
-const defaultPortfolioState: PortfolioState = {
-  cashBalance: 187540,
-  currencies: [
-    { code: "USD", quantity: 320, averageRate: 91.4 },
-    { code: "CNY", quantity: 1800, averageRate: 12.55 },
-  ],
-  holdings: [
-    { ticker: "SBER", quantity: 18, averagePrice: 292.4 },
-    { ticker: "LKOH", quantity: 3, averagePrice: 7148.3 },
-    { ticker: "TATN", quantity: 12, averagePrice: 672.8 },
-  ],
-  transactions: [
-    {
-      id: "seed-deposit",
-      type: "deposit",
-      amount: 240000,
-      createdAt: "2026-03-25T08:30:00.000Z",
-      note: "Стартовый счет",
-    },
-    {
-      id: "seed-buy-sber",
-      type: "buy",
-      amount: 5263.2,
-      ticker: "SBER",
-      quantity: 18,
-      price: 292.4,
-      createdAt: "2026-03-26T10:00:00.000Z",
-    },
-    {
-      id: "seed-buy-lkoh",
-      type: "buy",
-      amount: 21444.9,
-      ticker: "LKOH",
-      quantity: 3,
-      price: 7148.3,
-      createdAt: "2026-03-27T10:40:00.000Z",
-    },
-    {
-      id: "seed-buy-tatn",
-      type: "buy",
-      amount: 8073.6,
-      ticker: "TATN",
-      quantity: 12,
-      price: 672.8,
-      createdAt: "2026-03-28T12:00:00.000Z",
-    },
-    {
-      id: "seed-fx-buy-usd",
-      type: "fx-buy",
-      amount: 29248,
-      currencyCode: "USD",
-      quantity: 320,
-      price: 91.4,
-      createdAt: "2026-03-29T09:15:00.000Z",
-    },
-    {
-      id: "seed-fx-buy-cny",
-      type: "fx-buy",
-      amount: 22590,
-      currencyCode: "CNY",
-      quantity: 1800,
-      price: 12.55,
-      createdAt: "2026-03-30T10:20:00.000Z",
-    },
-  ],
-};
-
 const PortfolioContext = React.createContext<PortfolioContextValue | null>(
   null
 );
-
-function parseStoredPortfolio(value: string | null) {
-  if (!value) {
-    return defaultPortfolioState;
-  }
-
-  try {
-    const parsed = JSON.parse(value) as PortfolioState;
-
-    if (
-      typeof parsed.cashBalance !== "number" ||
-      (parsed.currencies !== undefined && !Array.isArray(parsed.currencies)) ||
-      !Array.isArray(parsed.holdings) ||
-      !Array.isArray(parsed.transactions)
-    ) {
-      return defaultPortfolioState;
-    }
-
-    return {
-      ...defaultPortfolioState,
-      ...parsed,
-      currencies: parsed.currencies ?? defaultPortfolioState.currencies,
-    };
-  } catch {
-    return defaultPortfolioState;
-  }
-}
-
-function createTransactionId(prefix: string) {
-  return `${prefix}-${crypto.randomUUID()}`;
-}
 
 export function buildPortfolioSnapshot(
   portfolio: PortfolioState,
@@ -281,50 +164,50 @@ export function buildPortfolioSnapshot(
   };
 }
 
-export function PortfolioProvider({ children }: { children: React.ReactNode }) {
+export function PortfolioProvider({
+  children,
+  initialPortfolio,
+}: {
+  children: React.ReactNode;
+  initialPortfolio?: PortfolioState | null;
+}) {
   const [portfolio, setPortfolio] = React.useState<PortfolioState>(
-    defaultPortfolioState
+    initialPortfolio ?? emptyPortfolioState()
   );
-  const [hasLoaded, setHasLoaded] = React.useState(false);
+  const [isPending, setIsPending] = React.useState(false);
 
-  React.useEffect(() => {
-    setPortfolio(
-      parseStoredPortfolio(window.localStorage.getItem(STORAGE_KEY))
-    );
-    setHasLoaded(true);
+  const refreshPortfolio = React.useCallback(async () => {
+    setIsPending(true);
+
+    try {
+      const nextPortfolio = await getPortfolioStateAction();
+      setPortfolio(nextPortfolio);
+    } finally {
+      setIsPending(false);
+    }
   }, []);
 
-  React.useEffect(() => {
-    if (!hasLoaded) {
-      return;
-    }
-
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolio));
-  }, [hasLoaded, portfolio]);
-
-  const depositFunds = React.useCallback((amount: number, note?: string) => {
+  const depositFunds = React.useCallback(async (amount: number) => {
     if (!Number.isFinite(amount) || amount <= 0) {
-      return;
+      return false;
     }
 
-    setPortfolio((currentPortfolio) => ({
-      ...currentPortfolio,
-      cashBalance: currentPortfolio.cashBalance + amount,
-      transactions: [
-        {
-          id: createTransactionId("deposit"),
-          type: "deposit",
-          amount,
-          createdAt: new Date().toISOString(),
-          note,
-        },
-        ...currentPortfolio.transactions,
-      ],
-    }));
+    setIsPending(true);
+
+    try {
+      const nextPortfolio = await depositFundsAction(amount);
+      setPortfolio(nextPortfolio);
+
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setIsPending(false);
+    }
   }, []);
 
   const tradeCurrency = React.useCallback(
-    ({
+    async ({
       amount,
       code,
       side,
@@ -339,95 +222,71 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      let didApply = false;
+      setIsPending(true);
 
-      setPortfolio((currentPortfolio) => {
-        const fxQuantity = side === "buy" ? amount / rate : amount;
-        const rubAmount = side === "buy" ? amount : amount * rate;
-        const existingBalance = currentPortfolio.currencies.find(
-          (currency) => currency.code === code
-        );
-        const existingQuantity = existingBalance?.quantity ?? 0;
+      try {
+        const nextPortfolio = await tradeCurrencyAction({
+          amount,
+          code,
+          side,
+          rate,
+        });
+        setPortfolio(nextPortfolio);
 
-        if (
-          side === "buy" &&
-          currentPortfolio.cashBalance + Number.EPSILON < rubAmount
-        ) {
-          return currentPortfolio;
-        }
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setIsPending(false);
+      }
+    },
+    []
+  );
 
-        if (side === "sell" && existingQuantity + Number.EPSILON < fxQuantity) {
-          return currentPortfolio;
-        }
+  const tradeStock = React.useCallback(
+    async ({
+      fee = 0,
+      price,
+      quantity,
+      side,
+      ticker,
+    }: {
+      ticker: string;
+      side: "buy" | "sell";
+      quantity: number;
+      price: number;
+      fee?: number;
+    }) => {
+      if (
+        !ticker ||
+        !Number.isFinite(quantity) ||
+        quantity <= 0 ||
+        !Number.isFinite(price) ||
+        price <= 0 ||
+        !Number.isFinite(fee) ||
+        fee < 0
+      ) {
+        return false;
+      }
 
-        didApply = true;
+      setIsPending(true);
 
-        const nextCurrencies =
-          side === "buy"
-            ? (() => {
-                const nextQuantity = existingQuantity + fxQuantity;
-                const nextAverageRate =
-                  nextQuantity > 0
-                    ? ((existingBalance?.averageRate ?? 0) * existingQuantity +
-                        rubAmount) /
-                      nextQuantity
-                    : rate;
+      try {
+        const nextPortfolio = await tradeStockAction({
+          fee,
+          price,
+          quantity,
+          side,
+          ticker,
+        });
+        setPortfolio(nextPortfolio);
 
-                if (existingBalance) {
-                  return currentPortfolio.currencies.map((currency) =>
-                    currency.code === code
-                      ? {
-                          ...currency,
-                          quantity: nextQuantity,
-                          averageRate: nextAverageRate,
-                        }
-                      : currency
-                  );
-                }
-
-                return [
-                  ...currentPortfolio.currencies,
-                  {
-                    code,
-                    quantity: nextQuantity,
-                    averageRate: nextAverageRate,
-                  },
-                ];
-              })()
-            : currentPortfolio.currencies
-                .map((currency) =>
-                  currency.code === code
-                    ? {
-                        ...currency,
-                        quantity: Math.max(0, currency.quantity - fxQuantity),
-                      }
-                    : currency
-                )
-                .filter((currency) => currency.quantity > 0.000001);
-
-        return {
-          ...currentPortfolio,
-          cashBalance:
-            side === "buy"
-              ? currentPortfolio.cashBalance - rubAmount
-              : currentPortfolio.cashBalance + rubAmount,
-          currencies: nextCurrencies,
-          transactions: [
-            {
-              id: createTransactionId(side === "buy" ? "fx-buy" : "fx-sell"),
-              type: side === "buy" ? "fx-buy" : "fx-sell",
-              amount: rubAmount,
-              currencyCode: code,
-              quantity: fxQuantity,
-              price: rate,
-              createdAt: new Date().toISOString(),
-            },
-            ...currentPortfolio.transactions,
-          ],
-        };
-      });
-
-      return didApply;
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setIsPending(false);
+      }
     },
     []
   );
@@ -435,10 +294,13 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo(
     () => ({
       portfolio,
+      isPending,
+      refreshPortfolio,
       depositFunds,
       tradeCurrency,
+      tradeStock,
     }),
-    [depositFunds, portfolio, tradeCurrency]
+    [depositFunds, isPending, portfolio, refreshPortfolio, tradeCurrency, tradeStock]
   );
 
   return (

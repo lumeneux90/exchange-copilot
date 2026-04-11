@@ -209,8 +209,7 @@ export function PortfolioOverview({
         ) : (
           <CardContent>
             <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              Пока нет валютных остатков. Быструю покупку можно сделать прямо из
-              блока `FX Trade` в сайдбаре.
+              Пока нет валютных остатков.
             </div>
           </CardContent>
         )}
@@ -304,7 +303,7 @@ export function PortfolioOverview({
                 </EmptyMedia>
                 <EmptyTitle>Портфель пуст</EmptyTitle>
                 <EmptyDescription>
-                  Пожалуйста, пополните ваш счет.
+                  Пожалуйста, пополните ваш счет и проведите сделку.
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>

@@ -36,21 +36,24 @@ export function DepositFundsSheet({
   triggerClassName?: string;
   side?: "top" | "right" | "bottom" | "left";
 }) {
-  const { depositFunds } = usePortfolio();
+  const { depositFunds, isPending } = usePortfolio();
   const [open, setOpen] = React.useState(false);
   const [amount, setAmount] = React.useState("10000");
 
   const parsedAmount = parseAmount(amount);
   const isValidAmount = parsedAmount > 0;
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!isValidAmount) {
       return;
     }
 
-    depositFunds(parsedAmount, "Пополнение из sidebar");
-    setAmount("10000");
-    setOpen(false);
+    const didDeposit = await depositFunds(parsedAmount);
+
+    if (didDeposit) {
+      setAmount("10000");
+      setOpen(false);
+    }
   }
 
   return (
@@ -74,9 +77,7 @@ export function DepositFundsSheet({
         <SheetHeader>
           <SheetTitle>Пополнение счета</SheetTitle>
           <SheetDescription>
-            Добавим локальный баланс портфеля без бэкенда и БД. Деньги
-            сохраняются в `localStorage`, так что можно уже строить портфельный
-            сценарий.
+            Пополнение выполняется моментально.
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-1 flex-col gap-4 px-6">
@@ -101,7 +102,10 @@ export function DepositFundsSheet({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValidAmount}>
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={!isValidAmount || isPending}
+          >
             Зачислить {isValidAmount ? `${parsedAmount.toFixed(2)} RUB` : ""}
           </Button>
         </SheetFooter>
