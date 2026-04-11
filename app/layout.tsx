@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { getPortfolioState } from "@/src/features/portfolio/model/portfolio-server";
+import { getCurrentUser } from "@/src/lib/session";
 
 export const metadata: Metadata = {
   title: "Xchange Copilot",
@@ -13,7 +15,10 @@ type RootLayoutProps = Readonly<{
   children: React.ReactNode;
 }>;
 
-export default function RootLayout({ children }: RootLayoutProps) {
+export default async function RootLayout({ children }: RootLayoutProps) {
+  const user = await getCurrentUser();
+  const initialPortfolio = user ? await getPortfolioState(user.id) : null;
+
   return (
     <html
       lang="ru"
@@ -22,7 +27,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       style={{ "--font-sans": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif" } as React.CSSProperties}
     >
       <body suppressHydrationWarning>
-        <Providers>
+        <Providers initialPortfolio={initialPortfolio}>
           <TooltipProvider>{children}</TooltipProvider>
         </Providers>
       </body>

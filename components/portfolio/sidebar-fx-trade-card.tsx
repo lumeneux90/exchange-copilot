@@ -64,7 +64,7 @@ export function SidebarFxTradeCard({
 }: {
   currencyRates: CurrencyRate[];
 }) {
-  const { portfolio, tradeCurrency } = usePortfolio();
+  const { isPending, portfolio, tradeCurrency } = usePortfolio();
   const snapshot = buildPortfolioSnapshot(portfolio, [], currencyRates);
   const availableCodes = React.useMemo(
     () =>
@@ -117,7 +117,7 @@ export function SidebarFxTradeCard({
     setAmount(side === "buy" ? "10000" : "100");
   }, [side, selectedCode]);
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!selectedRate || !canTrade) {
       return;
     }
@@ -129,7 +129,7 @@ export function SidebarFxTradeCard({
       rate: selectedRate.price,
     });
 
-    if (didTrade) {
+    if (await didTrade) {
       setAmount(side === "buy" ? "10000" : "100");
     }
   }
@@ -232,7 +232,7 @@ export function SidebarFxTradeCard({
             </div>
           </div>
 
-          <Button onClick={handleSubmit} disabled={!canTrade}>
+          <Button onClick={() => void handleSubmit()} disabled={!canTrade || isPending}>
             <RiExchangeDollarLine />
             {side === "buy"
               ? `Купить ${selectedCode}`

@@ -61,7 +61,7 @@ export function TradeOrderSheet({
   triggerSize?: React.ComponentProps<typeof Button>["size"];
   triggerClassName?: string;
 }) {
-  const { portfolio } = usePortfolio();
+  const { isPending, portfolio, tradeStock } = usePortfolio();
   const snapshot = buildPortfolioSnapshot(portfolio, stock ? [stock] : []);
   const selectedHolding =
     snapshot.holdings.find((holding) => holding.ticker === stock?.ticker) ?? null;
@@ -84,6 +84,24 @@ export function TradeOrderSheet({
       setQuantity("1");
     }
   }, [open, stock?.ticker]);
+
+  async function handleTrade(side: "buy" | "sell") {
+    if (!stock) {
+      return;
+    }
+
+    const didTrade = await tradeStock({
+      ticker: stock.ticker,
+      side,
+      quantity: parsedQuantity,
+      price: currentPrice,
+    });
+
+    if (didTrade) {
+      setOpen(false);
+      setQuantity("1");
+    }
+  }
 
   if (!stock) {
     if (showTrigger) {
@@ -173,14 +191,17 @@ export function TradeOrderSheet({
                 </div>
               </div>
               <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                Каркас сделки уже привязан к выбранной компании. Следующим шагом
-                сюда можно добавить реальное списание баланса и запись в историю.
+                Покупка уже обновляет портфель в базе данных. Историю сделок
+                можно будет добавить следующим шагом отдельной задачей.
               </div>
               <SheetFooter className="px-0 pb-0">
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Отмена
                 </Button>
-                <Button disabled={!canBuy}>
+                <Button
+                  disabled={!canBuy || isPending}
+                  onClick={() => void handleTrade("buy")}
+                >
                   <RiWallet3Line />
                   Купить {parsedQuantity > 0 ? `${parsedQuantity} шт.` : ""}
                 </Button>
@@ -217,14 +238,18 @@ export function TradeOrderSheet({
                 </div>
               </div>
               <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                Продажа тоже уже знает про выбранный тикер и текущую позицию в
-                портфеле. Останется только подключить бизнес-логику.
+                Продажа использует текущую позицию и сразу обновляет остаток
+                портфеля в базе данных.
               </div>
               <SheetFooter className="px-0 pb-0">
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Отмена
                 </Button>
-                <Button variant="destructive" disabled={!canSell}>
+                <Button
+                  variant="destructive"
+                  disabled={!canSell || isPending}
+                  onClick={() => void handleTrade("sell")}
+                >
                   Продать {parsedQuantity > 0 ? `${parsedQuantity} шт.` : ""}
                 </Button>
               </SheetFooter>

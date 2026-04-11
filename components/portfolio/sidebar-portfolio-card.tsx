@@ -72,7 +72,7 @@ export function SidebarPortfolioCard({
         ? "text-red-600 dark:text-red-400"
         : "text-muted-foreground";
   const investedValue = snapshot.marketValue + snapshot.currenciesMarketValue;
-  const totalValue = snapshot.totalValue || 1;
+  const totalValue = snapshot.totalValue || 0;
   const allocationSegments = [
     {
       chartKey: "cash",

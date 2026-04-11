@@ -7,11 +7,12 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  login        String    @unique
-  passwordHash String    @map("password_hash")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id           String     @id @default(cuid())
+  login        String     @unique
+  passwordHash String     @map("password_hash")
+  createdAt    DateTime   @default(now()) @map("created_at")
   sessions     Session[]
+  portfolio    Portfolio?
 
   @@map("users")
 }
@@ -26,4 +27,41 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+enum PortfolioPositionType {
+  STOCK
+  CURRENCY
+}
+
+model Portfolio {
+  id          String              @id @default(cuid())
+  userId      String              @unique @map("user_id")
+  cashBalance Decimal             @default(0) @map("cash_balance") @db.Decimal(20, 8)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions   PortfolioPosition[]
+
+  @@map("portfolios")
+}
+
+model PortfolioPosition {
+  id           String                @id @default(cuid())
+  portfolioId  String                @map("portfolio_id")
+  type         PortfolioPositionType
+  ticker       String?
+  currencyCode String?               @map("currency_code")
+  quantity     Decimal               @db.Decimal(20, 8)
+  averagePrice Decimal?              @map("average_price") @db.Decimal(20, 8)
+  averageRate  Decimal?              @map("average_rate") @db.Decimal(20, 8)
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  portfolio    Portfolio             @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId])
+  @@index([portfolioId, type])
+  @@unique([portfolioId, ticker])
+  @@unique([portfolioId, currencyCode])
+  @@map("portfolio_positions")
 }
