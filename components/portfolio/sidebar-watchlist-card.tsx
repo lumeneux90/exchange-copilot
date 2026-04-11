@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useWatchlist } from "@/src/features/watchlist/model/watchlist-context";
 import type { Stock } from "@/src/entities/stock/model/types";
+import { formatSignedPercent } from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
 
 function getTrendTone(value: number) {
@@ -22,12 +23,6 @@ function getTrendTone(value: number) {
   }
 
   return "text-muted-foreground";
-}
-
-function formatSignedPercent(value: number) {
-  const sign = value > 0 ? "+" : "";
-
-  return `${sign}${value.toFixed(2)}%`;
 }
 
 export function SidebarWatchlistCard({ stocks }: { stocks: Stock[] }) {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { Prisma, type PrismaClient } from "@prisma/client";
 
+import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
 import { prisma } from "@/src/lib/db";
 import type { PortfolioState } from "@/src/features/portfolio/model/types";
 
@@ -122,10 +123,19 @@ export async function tradeCurrency(params: {
   side: "buy" | "sell";
   amount: number;
   rate: number;
+  fee?: number;
 }) {
-  const { amount, code, rate, side, userId } = params;
+  const { amount, code, fee = 0, rate, side, userId } = params;
 
-  if (!code || !Number.isFinite(amount) || amount <= 0 || rate <= 0) {
+  if (
+    !code ||
+    !Number.isFinite(amount) ||
+    amount <= 0 ||
+    !Number.isFinite(rate) ||
+    rate <= 0 ||
+    !Number.isFinite(fee) ||
+    fee < 0
+  ) {
     throw new Error("Некорректные параметры валютной сделки.");
   }
 
@@ -144,9 +154,10 @@ export async function tradeCurrency(params: {
 
     if (side === "buy") {
       const rubAmount = amount;
+      const totalCost = rubAmount + fee;
       const fxQuantity = amount / rate;
 
-      if (currentCashBalance + Number.EPSILON < rubAmount) {
+      if (currentCashBalance + Number.EPSILON < totalCost) {
         throw new Error("Недостаточно рублей для покупки валюты.");
       }
 
@@ -180,16 +191,21 @@ export async function tradeCurrency(params: {
         where: { id: currentPortfolio.id },
         data: {
           cashBalance: {
-            decrement: toDecimal(rubAmount),
+            decrement: toDecimal(totalCost),
           },
         },
       });
     } else {
       const fxQuantity = amount;
       const rubAmount = amount * rate;
+      const netRubAmount = rubAmount - fee;
 
       if (currentQuantity + Number.EPSILON < fxQuantity) {
         throw new Error("Недостаточно валюты для продажи.");
+      }
+
+      if (netRubAmount < 0) {
+        throw new Error("Комиссия не может быть больше суммы валютной сделки.");
       }
 
       const nextQuantity = currentQuantity - fxQuantity;
@@ -213,7 +229,7 @@ export async function tradeCurrency(params: {
         where: { id: currentPortfolio.id },
         data: {
           cashBalance: {
-            increment: toDecimal(rubAmount),
+            increment: toDecimal(netRubAmount),
           },
         },
       });
@@ -253,6 +269,11 @@ export async function tradeStock(params: {
   }
 
   const normalizedTicker = ticker.trim().toUpperCase();
+  const marketStatus = getStockMarketStatus();
+
+  if (!marketStatus.isOpen) {
+    throw new Error(marketStatus.reason ?? "Торговая сессия по акциям закрыта.");
+  }
 
   const portfolio = await prisma.$transaction(async (tx) => {
     const currentPortfolio = await getOrCreatePortfolioRecord(tx, userId);

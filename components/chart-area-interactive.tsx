@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   RiArrowDownLine,
@@ -70,6 +70,8 @@ import { useWatchlist } from "@/src/features/watchlist/model/watchlist-context";
 type CandleRequestState = "loading" | "success" | "error";
 
 export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isInWatchlist, tickers, toggleTicker } = useWatchlist();
   const requestedTicker = searchParams.get("ticker")?.trim().toUpperCase() ?? "";
@@ -83,6 +85,24 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
     selectedTicker ? "loading" : "success"
   );
   const lastAppliedRequestedTicker = React.useRef("");
+
+  const updateTickerQuery = React.useCallback(
+    (ticker: string) => {
+      const nextParams = new URLSearchParams(searchParams.toString());
+
+      if (ticker) {
+        nextParams.set("ticker", ticker);
+      } else {
+        nextParams.delete("ticker");
+      }
+
+      const nextQuery = nextParams.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams]
+  );
 
   React.useEffect(() => {
     if (!stocks.length) {
@@ -264,6 +284,7 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
                               onSelect={() => {
                                 React.startTransition(() => {
                                   setSelectedTicker(stock.ticker);
+                                  updateTickerQuery(stock.ticker);
                                   setIsTickerOpen(false);
                                 });
                               }}
@@ -306,6 +327,7 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
                             onSelect={() => {
                               React.startTransition(() => {
                                 setSelectedTicker(stock.ticker);
+                                updateTickerQuery(stock.ticker);
                                 setIsTickerOpen(false);
                               });
                             }}

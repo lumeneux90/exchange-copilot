@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { RiWallet3Line } from "@remixicon/react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +16,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { usePortfolio } from "@/src/features/portfolio/model/portfolio-context";
-
-function parseAmount(value: string) {
-  const normalized = value.replace(",", ".").replace(/\s+/g, "");
-  const amount = Number(normalized);
-
-  return Number.isFinite(amount) ? amount : 0;
-}
+import { getErrorMessage } from "@/src/lib/errors";
+import { parseDecimalInput } from "@/src/lib/money";
 
 export function DepositFundsSheet({
   triggerLabel = "Пополнить счет",
@@ -40,7 +36,7 @@ export function DepositFundsSheet({
   const [open, setOpen] = React.useState(false);
   const [amount, setAmount] = React.useState("10000");
 
-  const parsedAmount = parseAmount(amount);
+  const parsedAmount = parseDecimalInput(amount);
   const isValidAmount = parsedAmount > 0;
 
   async function handleSubmit() {
@@ -48,11 +44,13 @@ export function DepositFundsSheet({
       return;
     }
 
-    const didDeposit = await depositFunds(parsedAmount);
-
-    if (didDeposit) {
+    try {
+      await depositFunds(parsedAmount);
       setAmount("10000");
       setOpen(false);
+      toast.success("Баланс портфеля пополнен.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Не удалось пополнить счет."));
     }
   }
 

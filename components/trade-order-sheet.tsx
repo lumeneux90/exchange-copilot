@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { RiArrowLeftRightLine, RiWallet3Line } from "@remixicon/react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,25 +23,13 @@ import {
   buildPortfolioSnapshot,
   usePortfolio,
 } from "@/src/features/portfolio/model/portfolio-context";
-
-const rubFormatter = new Intl.NumberFormat("ru-RU", {
-  style: "currency",
-  currency: "RUB",
-  maximumFractionDigits: 2,
-});
-
-function parseQuantity(value: string) {
-  const normalized = value.replace(",", ".").replace(/\s+/g, "");
-  const quantity = Number(normalized);
-
-  return Number.isFinite(quantity) ? quantity : 0;
-}
-
-function formatSignedPercent(value: number) {
-  const sign = value > 0 ? "+" : "";
-
-  return `${sign}${value.toFixed(2)}%`;
-}
+import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
+import { getErrorMessage } from "@/src/lib/errors";
+import {
+  formatSignedPercent,
+  parseDecimalInput,
+  rubFormatter,
+} from "@/src/lib/money";
 
 export function TradeOrderSheet({
   stock,
@@ -64,15 +53,28 @@ export function TradeOrderSheet({
   const { isPending, portfolio, tradeStock } = usePortfolio();
   const snapshot = buildPortfolioSnapshot(portfolio, stock ? [stock] : []);
   const selectedHolding =
-    snapshot.holdings.find((holding) => holding.ticker === stock?.ticker) ?? null;
+    snapshot.holdings.find((holding) => holding.ticker === stock?.ticker) ??
+    null;
   const [internalOpen, setInternalOpen] = React.useState(false);
   const open = openProp ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
   const [quantity, setQuantity] = React.useState("1");
+  const [fee, setFee] = React.useState("0");
 
-  const parsedQuantity = parseQuantity(quantity);
+  const parsedQuantity = parseDecimalInput(quantity);
+  const parsedFee = parseDecimalInput(fee);
   const currentPrice = stock?.price ?? 0;
-  const totalAmount = parsedQuantity * currentPrice;
+  const grossAmount = parsedQuantity * currentPrice;
+  const buyTotalAmount = grossAmount + parsedFee;
+  const sellNetAmount = Math.max(0, grossAmount - parsedFee);
+  const marketStatus = getStockMarketStatus();
+  const isStockMarketOpen = marketStatus.isOpen;
+  const triggerDisabledReason = !isStockMarketOpen
+    ? marketStatus.reason
+    : currentPrice <= 0
+      ? "Сделка недоступна, пока по бумаге нет актуальной цены."
+      : null;
+  const isTriggerDisabled = Boolean(triggerDisabledReason) || isPending;
   const canBuy = currentPrice > 0 && parsedQuantity > 0;
   const canSell =
     currentPrice > 0 &&
@@ -82,6 +84,7 @@ export function TradeOrderSheet({
   React.useEffect(() => {
     if (!open) {
       setQuantity("1");
+      setFee("0");
     }
   }, [open, stock?.ticker]);
 
@@ -90,16 +93,26 @@ export function TradeOrderSheet({
       return;
     }
 
-    const didTrade = await tradeStock({
-      ticker: stock.ticker,
-      side,
-      quantity: parsedQuantity,
-      price: currentPrice,
-    });
-
-    if (didTrade) {
+    try {
+      await tradeStock({
+        ticker: stock.ticker,
+        side,
+        quantity: parsedQuantity,
+        price: currentPrice,
+        fee: parsedFee,
+      });
       setOpen(false);
       setQuantity("1");
+      setFee("0");
+      toast.success(
+        side === "buy"
+          ? `${stock.ticker} добавлена в портфель.`
+          : `${stock.ticker} продана из портфеля.`
+      );
+    } catch (error) {
+      toast.error(
+        getErrorMessage(error, "Не удалось выполнить сделку по акции.")
+      );
     }
   }
 
@@ -125,6 +138,8 @@ export function TradeOrderSheet({
               variant={triggerVariant}
               size={triggerSize}
               className={triggerClassName}
+              disabled={isTriggerDisabled}
+              title={triggerDisabledReason ?? undefined}
             />
           }
         >
@@ -144,15 +159,21 @@ export function TradeOrderSheet({
         <div className="flex flex-1 flex-col gap-5 px-6">
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg border p-3">
-              <div className="text-xs text-muted-foreground">Свободный баланс</div>
+              <div className="text-muted-foreground text-xs">
+                Свободный баланс
+              </div>
               <div className="mt-1 text-sm font-semibold">
                 {rubFormatter.format(snapshot.cashBalance)}
               </div>
             </div>
             <div className="rounded-lg border p-3">
-              <div className="text-xs text-muted-foreground">Позиция в портфеле</div>
+              <div className="text-muted-foreground text-xs">
+                Всего в портфеле
+              </div>
               <div className="mt-1 text-sm font-semibold">
-                {selectedHolding ? `${selectedHolding.quantity} шт.` : "Нет позиции"}
+                {selectedHolding
+                  ? `${selectedHolding.quantity} шт.`
+                  : "Нет позиции"}
               </div>
             </div>
           </div>
@@ -176,30 +197,53 @@ export function TradeOrderSheet({
                   placeholder="1"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="buy-fee">Комиссия, RUB</Label>
+                <Input
+                  id="buy-fee"
+                  inputMode="decimal"
+                  value={fee}
+                  onChange={(event) => setFee(event.target.value)}
+                  placeholder="0"
+                />
+              </div>
               <div className="grid gap-2 rounded-lg border border-dashed p-4 text-sm">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">Цена за бумагу</span>
                   <span>{rubFormatter.format(currentPrice)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Сумма сделки</span>
-                  <span>{rubFormatter.format(totalAmount)}</span>
+                  <span className="text-muted-foreground">Сумма без комиссии</span>
+                  <span>{rubFormatter.format(grossAmount)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Остаток после покупки</span>
-                  <span>{rubFormatter.format(snapshot.cashBalance - totalAmount)}</span>
+                  <span className="text-muted-foreground">Комиссия</span>
+                  <span>{rubFormatter.format(parsedFee)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Итого к списанию</span>
+                  <span>{rubFormatter.format(buyTotalAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    Остаток после покупки
+                  </span>
+                  <span>
+                    {rubFormatter.format(snapshot.cashBalance - buyTotalAmount)}
+                  </span>
                 </div>
               </div>
-              <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                Покупка уже обновляет портфель в базе данных. Историю сделок
-                можно будет добавить следующим шагом отдельной задачей.
-              </div>
+              {!isStockMarketOpen ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  {marketStatus.reason}
+                </div>
+              ) : null}
               <SheetFooter className="px-0 pb-0">
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Отмена
                 </Button>
                 <Button
-                  disabled={!canBuy || isPending}
+                  disabled={!canBuy || !isStockMarketOpen || isPending}
                   onClick={() => void handleTrade("buy")}
                 >
                   <RiWallet3Line />
@@ -219,17 +263,45 @@ export function TradeOrderSheet({
                   placeholder="1"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="sell-fee">Комиссия, RUB</Label>
+                <Input
+                  id="sell-fee"
+                  inputMode="decimal"
+                  value={fee}
+                  onChange={(event) => setFee(event.target.value)}
+                  placeholder="0"
+                />
+              </div>
               <div className="grid gap-2 rounded-lg border border-dashed p-4 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Доступно к продаже</span>
-                  <span>{selectedHolding ? `${selectedHolding.quantity} шт.` : "0 шт."}</span>
+                  <span className="text-muted-foreground">
+                    Доступно к продаже
+                  </span>
+                  <span>
+                    {selectedHolding
+                      ? `${selectedHolding.quantity} шт.`
+                      : "0 шт."}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Поступит на счет</span>
-                  <span>{rubFormatter.format(totalAmount)}</span>
+                  <span className="text-muted-foreground">Сумма без комиссии</span>
+                  <span>{rubFormatter.format(grossAmount)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Результат позиции</span>
+                  <span className="text-muted-foreground">Комиссия</span>
+                  <span>{rubFormatter.format(parsedFee)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    Поступит на счет
+                  </span>
+                  <span>{rubFormatter.format(sellNetAmount)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    Результат позиции
+                  </span>
                   <span>
                     {selectedHolding
                       ? formatSignedPercent(selectedHolding.profitLossPercent)
@@ -237,17 +309,22 @@ export function TradeOrderSheet({
                   </span>
                 </div>
               </div>
-              <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+              <div className="text-muted-foreground rounded-lg border p-3 text-sm">
                 Продажа использует текущую позицию и сразу обновляет остаток
                 портфеля в базе данных.
               </div>
+              {!isStockMarketOpen ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  {marketStatus.reason}
+                </div>
+              ) : null}
               <SheetFooter className="px-0 pb-0">
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Отмена
                 </Button>
                 <Button
                   variant="destructive"
-                  disabled={!canSell || isPending}
+                  disabled={!canSell || !isStockMarketOpen || isPending}
                   onClick={() => void handleTrade("sell")}
                 >
                   Продать {parsedQuantity > 0 ? `${parsedQuantity} шт.` : ""}
