@@ -26,14 +26,13 @@ import {
   buildPortfolioSnapshot,
   usePortfolio,
 } from "@/src/features/portfolio/model/portfolio-context";
+import {
+  formatSignedCurrency,
+  formatSignedPercent,
+  rubFormatterRounded,
+} from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
 import React from "react";
-
-const rubFormatter = new Intl.NumberFormat("ru-RU", {
-  style: "currency",
-  currency: "RUB",
-  maximumFractionDigits: 0,
-});
 
 const currencyDisplayMap: Record<string, { label: string }> = {
   USD: { label: "Доллар США" },
@@ -43,18 +42,6 @@ const currencyDisplayMap: Record<string, { label: string }> = {
   HKD: { label: "Гонконгский доллар" },
   AED: { label: "Дирхам ОАЭ" },
 };
-
-function formatSignedPercent(value: number) {
-  const sign = value > 0 ? "+" : "";
-
-  return `${sign}${value.toFixed(2)}%`;
-}
-
-function formatSignedCurrency(value: number) {
-  const sign = value > 0 ? "+" : "";
-
-  return `${sign}${rubFormatter.format(value)}`;
-}
 
 function formatCurrencyUnits(value: number, code: string) {
   return `${new Intl.NumberFormat("ru-RU", {
@@ -95,25 +82,25 @@ export function PortfolioOverview({
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardDescription>Общая стоимость</CardDescription>
-            <CardTitle className="text-2xl font-semibold">
-              {rubFormatter.format(snapshot.totalValue)}
+              <CardDescription>Общая стоимость</CardDescription>
+              <CardTitle className="text-2xl font-semibold">
+              {rubFormatterRounded.format(snapshot.totalValue)}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Свободные деньги</CardDescription>
-            <CardTitle className="text-2xl font-semibold">
-              {rubFormatter.format(snapshot.cashBalance)}
+              <CardDescription>Свободные деньги</CardDescription>
+              <CardTitle className="text-2xl font-semibold">
+              {rubFormatterRounded.format(snapshot.cashBalance)}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Инвестировано</CardDescription>
-            <CardTitle className="text-2xl font-semibold">
-              {rubFormatter.format(
+              <CardDescription>Инвестировано</CardDescription>
+              <CardTitle className="text-2xl font-semibold">
+              {rubFormatterRounded.format(
                 snapshot.marketValue + snapshot.currenciesMarketValue
               )}
             </CardTitle>
@@ -170,7 +157,7 @@ export function PortfolioOverview({
                       Курс сейчас
                     </div>
                     <div className="text-sm font-medium">
-                      {rubFormatter.format(currency.currentRate)}
+                      {rubFormatterRounded.format(currency.currentRate)}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -178,7 +165,7 @@ export function PortfolioOverview({
                       Стоимость
                     </div>
                     <div className="text-sm font-medium">
-                      {rubFormatter.format(currency.marketValue)}
+                      {rubFormatterRounded.format(currency.marketValue)}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -258,7 +245,7 @@ export function PortfolioOverview({
                       Цена сейчас
                     </div>
                     <div className="text-sm font-medium">
-                      {rubFormatter.format(holding.currentPrice)}
+                      {rubFormatterRounded.format(holding.currentPrice)}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -266,7 +253,7 @@ export function PortfolioOverview({
                       Стоимость
                     </div>
                     <div className="text-sm font-medium">
-                      {rubFormatter.format(holding.marketValue)}
+                      {rubFormatterRounded.format(holding.marketValue)}
                     </div>
                   </div>
                   <div className="space-y-1">

@@ -21,20 +21,21 @@ type PortfolioContextValue = {
   portfolio: PortfolioState;
   isPending: boolean;
   refreshPortfolio: () => Promise<void>;
-  depositFunds: (amount: number) => Promise<boolean>;
+  depositFunds: (amount: number) => Promise<void>;
   tradeCurrency: (params: {
     code: string;
     side: "buy" | "sell";
     amount: number;
     rate: number;
-  }) => Promise<boolean>;
+    fee?: number;
+  }) => Promise<void>;
   tradeStock: (params: {
     ticker: string;
     side: "buy" | "sell";
     quantity: number;
     price: number;
     fee?: number;
-  }) => Promise<boolean>;
+  }) => Promise<void>;
 };
 
 type PortfolioHoldingSnapshot = PortfolioHolding & {
@@ -189,18 +190,19 @@ export function PortfolioProvider({
 
   const depositFunds = React.useCallback(async (amount: number) => {
     if (!Number.isFinite(amount) || amount <= 0) {
-      return false;
+      throw new Error("Введите корректную сумму пополнения.");
     }
 
     setIsPending(true);
 
     try {
-      const nextPortfolio = await depositFundsAction(amount);
-      setPortfolio(nextPortfolio);
+      const result = await depositFundsAction(amount);
 
-      return true;
-    } catch {
-      return false;
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+
+      setPortfolio(result.portfolio);
     } finally {
       setIsPending(false);
     }
@@ -210,32 +212,44 @@ export function PortfolioProvider({
     async ({
       amount,
       code,
+      fee = 0,
       side,
       rate,
     }: {
       amount: number;
       code: string;
+      fee?: number;
       side: "buy" | "sell";
       rate: number;
     }) => {
-      if (!code || !Number.isFinite(amount) || amount <= 0 || rate <= 0) {
-        return false;
+      if (
+        !code ||
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        !Number.isFinite(rate) ||
+        rate <= 0 ||
+        !Number.isFinite(fee) ||
+        fee < 0
+      ) {
+        throw new Error("Некорректные параметры валютной сделки.");
       }
 
       setIsPending(true);
 
       try {
-        const nextPortfolio = await tradeCurrencyAction({
+        const result = await tradeCurrencyAction({
           amount,
           code,
+          fee,
           side,
           rate,
         });
-        setPortfolio(nextPortfolio);
 
-        return true;
-      } catch {
-        return false;
+        if (!result.ok) {
+          throw new Error(result.error);
+        }
+
+        setPortfolio(result.portfolio);
       } finally {
         setIsPending(false);
       }
@@ -266,24 +280,25 @@ export function PortfolioProvider({
         !Number.isFinite(fee) ||
         fee < 0
       ) {
-        return false;
+        throw new Error("Некорректные параметры сделки по акции.");
       }
 
       setIsPending(true);
 
       try {
-        const nextPortfolio = await tradeStockAction({
+        const result = await tradeStockAction({
           fee,
           price,
           quantity,
           side,
           ticker,
         });
-        setPortfolio(nextPortfolio);
 
-        return true;
-      } catch {
-        return false;
+        if (!result.ok) {
+          throw new Error(result.error);
+        }
+
+        setPortfolio(result.portfolio);
       } finally {
         setIsPending(false);
       }

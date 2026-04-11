@@ -6,7 +6,9 @@ import {
   tradeCurrency,
   tradeStock,
 } from "@/src/features/portfolio/model/portfolio-server";
+import { getErrorMessage } from "@/src/lib/errors";
 import { getCurrentUser } from "@/src/lib/session";
+import type { PortfolioState } from "@/src/features/portfolio/model/types";
 
 async function requireCurrentUserId() {
   const user = await getCurrentUser();
@@ -24,13 +26,28 @@ export async function getPortfolioStateAction() {
   return getPortfolioState(userId);
 }
 
-export async function depositFundsAction(amount: number) {
-  const userId = await requireCurrentUserId();
+type PortfolioActionResult =
+  | { ok: true; portfolio: PortfolioState }
+  | { ok: false; error: string };
 
-  return depositFunds({
-    userId,
-    amount,
-  });
+export async function depositFundsAction(amount: number) {
+  try {
+    const userId = await requireCurrentUserId();
+    const portfolio = await depositFunds({
+      userId,
+      amount,
+    });
+
+    return {
+      ok: true,
+      portfolio,
+    } satisfies PortfolioActionResult;
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error, "Не удалось пополнить счет."),
+    } satisfies PortfolioActionResult;
+  }
 }
 
 export async function tradeCurrencyAction(params: {
@@ -38,13 +55,25 @@ export async function tradeCurrencyAction(params: {
   side: "buy" | "sell";
   amount: number;
   rate: number;
+  fee?: number;
 }) {
-  const userId = await requireCurrentUserId();
+  try {
+    const userId = await requireCurrentUserId();
+    const portfolio = await tradeCurrency({
+      userId,
+      ...params,
+    });
 
-  return tradeCurrency({
-    userId,
-    ...params,
-  });
+    return {
+      ok: true,
+      portfolio,
+    } satisfies PortfolioActionResult;
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error, "Не удалось выполнить валютную сделку."),
+    } satisfies PortfolioActionResult;
+  }
 }
 
 export async function tradeStockAction(params: {
@@ -54,10 +83,21 @@ export async function tradeStockAction(params: {
   price: number;
   fee?: number;
 }) {
-  const userId = await requireCurrentUserId();
+  try {
+    const userId = await requireCurrentUserId();
+    const portfolio = await tradeStock({
+      userId,
+      ...params,
+    });
 
-  return tradeStock({
-    userId,
-    ...params,
-  });
+    return {
+      ok: true,
+      portfolio,
+    } satisfies PortfolioActionResult;
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error, "Не удалось выполнить сделку по акции."),
+    } satisfies PortfolioActionResult;
+  }
 }

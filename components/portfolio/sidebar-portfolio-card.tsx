@@ -26,6 +26,11 @@ import {
 } from "@/src/features/portfolio/model/portfolio-context";
 import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
+import {
+  formatSignedCurrency,
+  formatSignedPercent,
+  rubFormatterRounded,
+} from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
 import {
   Item,
@@ -33,12 +38,6 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
-
-const rubFormatter = new Intl.NumberFormat("ru-RU", {
-  style: "currency",
-  currency: "RUB",
-  maximumFractionDigits: 0,
-});
 
 const allocationChartConfig = {
   cash: {
@@ -73,26 +72,66 @@ export function SidebarPortfolioCard({
         : "text-muted-foreground";
   const investedValue = snapshot.marketValue + snapshot.currenciesMarketValue;
   const totalValue = snapshot.totalValue || 0;
+  const segmentValues = {
+    cash: snapshot.cashBalance,
+    stocks: snapshot.marketValue,
+    fx: snapshot.currenciesMarketValue,
+  } as const;
+  const visibleSegmentKeys = (Object.entries(segmentValues) as Array<
+    [keyof typeof segmentValues, number]
+  >)
+    .filter(([, value]) => value > 0)
+    .map(([key]) => key);
+  const firstVisibleSegmentKey = visibleSegmentKeys[0] ?? null;
+  const lastVisibleSegmentKey =
+    visibleSegmentKeys[visibleSegmentKeys.length - 1] ?? null;
+  const getSegmentRadius = (
+    key: keyof typeof segmentValues
+  ): [number, number, number, number] => {
+    if (!visibleSegmentKeys.length || !visibleSegmentKeys.includes(key)) {
+      return [0, 0, 0, 0];
+    }
+
+    const isFirst = firstVisibleSegmentKey === key;
+    const isLast = lastVisibleSegmentKey === key;
+
+    if (isFirst && isLast) {
+      return [999, 999, 999, 999];
+    }
+
+    if (isFirst) {
+      return [999, 0, 0, 999];
+    }
+
+    if (isLast) {
+      return [0, 999, 999, 0];
+    }
+
+    return [0, 0, 0, 0];
+  };
+  const cashRadius = getSegmentRadius("cash");
+  const stocksRadius = getSegmentRadius("stocks");
+  const fxRadius = getSegmentRadius("fx");
   const allocationSegments = [
     {
       chartKey: "cash",
       color: "bg-muted-foreground/35",
       label: "Свободные деньги",
-      share: snapshot.cashBalance / totalValue,
+      share: totalValue > 0 ? snapshot.cashBalance / totalValue : 0,
       value: snapshot.cashBalance,
     },
     {
       chartKey: "stocks",
       color: "bg-primary",
       label: "Акции",
-      share: snapshot.marketValue / totalValue,
+      share: totalValue > 0 ? snapshot.marketValue / totalValue : 0,
       value: snapshot.marketValue,
     },
     {
       chartKey: "fx",
       color: "bg-amber-500",
       label: "Валюта",
-      share: snapshot.currenciesMarketValue / totalValue,
+      share: totalValue > 0 ? snapshot.currenciesMarketValue / totalValue : 0,
       value: snapshot.currenciesMarketValue,
     },
   ];
@@ -113,7 +152,7 @@ export function SidebarPortfolioCard({
           <CardHeader className="gap-1">
             <CardDescription>Текущий счет</CardDescription>
             <CardTitle className="text-lg font-semibold">
-              {rubFormatter.format(totalValue)}
+              {rubFormatterRounded.format(totalValue)}
             </CardTitle>
             <div
               className={cn(
@@ -146,20 +185,21 @@ export function SidebarPortfolioCard({
                     dataKey="cash"
                     stackId="allocation"
                     fill="var(--color-cash)"
-                    radius={[999, 0, 0, 999]}
+                    radius={cashRadius}
                     isAnimationActive={false}
                   />
                   <Bar
                     dataKey="stocks"
                     stackId="allocation"
                     fill="var(--color-stocks)"
+                    radius={stocksRadius}
                     isAnimationActive={false}
                   />
                   <Bar
                     dataKey="fx"
                     stackId="allocation"
                     fill="var(--color-fx)"
-                    radius={[0, 999, 999, 0]}
+                    radius={fxRadius}
                     isAnimationActive={false}
                   />
                 </BarChart>
@@ -183,7 +223,7 @@ export function SidebarPortfolioCard({
                   </div>
                   <div className="text-right">
                     <div className="text-foreground font-medium">
-                      {rubFormatter.format(segment.value)}
+                      {rubFormatterRounded.format(segment.value)}
                     </div>
                     <div className="text-muted-foreground text-[11px]">
                       {(segment.share * 100).toFixed(0)}%
@@ -196,7 +236,7 @@ export function SidebarPortfolioCard({
               <ItemContent>
                 <ItemTitle>Инвестировано</ItemTitle>
                 <ItemDescription>
-                  {rubFormatter.format(investedValue)}
+                  {rubFormatterRounded.format(investedValue)}
                 </ItemDescription>
               </ItemContent>
             </Item>
@@ -219,16 +259,4 @@ export function SidebarPortfolioCard({
       </SidebarGroupContent>
     </SidebarGroup>
   );
-}
-
-function formatSignedPercent(value: number) {
-  const sign = value > 0 ? "+" : "";
-
-  return `${sign}${value.toFixed(2)}%`;
-}
-
-function formatSignedCurrency(value: number) {
-  const sign = value > 0 ? "+" : "";
-
-  return `${sign}${rubFormatter.format(value)}`;
 }

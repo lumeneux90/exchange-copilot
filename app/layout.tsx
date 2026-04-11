@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import "./globals.css";
 import { Providers } from "./providers";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getPortfolioState } from "@/src/features/portfolio/model/portfolio-server";
 import { getCurrentUser } from "@/src/lib/session";
@@ -28,7 +29,10 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     >
       <body suppressHydrationWarning>
         <Providers initialPortfolio={initialPortfolio}>
-          <TooltipProvider>{children}</TooltipProvider>
+          <TooltipProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </TooltipProvider>
         </Providers>
       </body>
     </html>
