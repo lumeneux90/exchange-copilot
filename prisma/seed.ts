@@ -1,18 +1,13 @@
 import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import {
-  PortfolioPositionType,
-  PortfolioTransactionType,
-  Prisma,
-  PrismaClient,
-} from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.EXCHANGE_STORAGE_DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL is not configured.");
+  throw new Error("EXCHANGE_STORAGE_DATABASE_URL is not configured.");
 }
 
 const adapter = new PrismaPg({ connectionString });
@@ -62,7 +57,7 @@ async function main() {
   const positionSeeds = [
     {
       portfolioId: portfolio.id,
-      type: PortfolioPositionType.STOCK,
+      type: "STOCK",
       ticker: "SBER",
       currencyCode: null,
       quantity: decimal(14),
@@ -71,7 +66,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioPositionType.STOCK,
+      type: "STOCK",
       ticker: "LKOH",
       currencyCode: null,
       quantity: decimal(3),
@@ -80,7 +75,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioPositionType.STOCK,
+      type: "STOCK",
       ticker: "TATN",
       currencyCode: null,
       quantity: decimal(12),
@@ -89,7 +84,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioPositionType.CURRENCY,
+      type: "CURRENCY",
       ticker: null,
       currencyCode: "USD",
       quantity: decimal(320),
@@ -98,7 +93,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioPositionType.CURRENCY,
+      type: "CURRENCY",
       ticker: null,
       currencyCode: "CNY",
       quantity: decimal(1800),
@@ -110,7 +105,7 @@ async function main() {
   const transactionSeeds = [
     {
       portfolioId: portfolio.id,
-      type: PortfolioTransactionType.DEPOSIT,
+      type: "DEPOSIT",
       ticker: null,
       currencyCode: null,
       quantity: null,
@@ -121,7 +116,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioTransactionType.BUY,
+      type: "BUY",
       ticker: "SBER",
       currencyCode: null,
       quantity: decimal(18),
@@ -132,7 +127,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioTransactionType.BUY,
+      type: "BUY",
       ticker: "LKOH",
       currencyCode: null,
       quantity: decimal(3),
@@ -143,7 +138,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioTransactionType.BUY,
+      type: "BUY",
       ticker: "TATN",
       currencyCode: null,
       quantity: decimal(12),
@@ -154,7 +149,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioTransactionType.FX_BUY,
+      type: "FX_BUY",
       ticker: null,
       currencyCode: "USD",
       quantity: decimal(320),
@@ -165,7 +160,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioTransactionType.FX_BUY,
+      type: "FX_BUY",
       ticker: null,
       currencyCode: "CNY",
       quantity: decimal(1800),
@@ -176,7 +171,7 @@ async function main() {
     },
     {
       portfolioId: portfolio.id,
-      type: PortfolioTransactionType.SELL,
+      type: "SELL",
       ticker: "SBER",
       currencyCode: null,
       quantity: decimal(4),

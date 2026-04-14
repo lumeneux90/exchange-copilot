@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies";
 
-import { prisma } from "@/src/lib/db";
+import { getPrisma } from "@/src/lib/db";
 
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7;
 
@@ -16,12 +16,14 @@ export async function verifyPassword(password: string, passwordHash: string) {
 }
 
 export async function findUserByLogin(login: string) {
+  const prisma = getPrisma();
   return prisma.user.findUnique({
     where: { login },
   });
 }
 
 export async function createSession(userId: string) {
+  const prisma = getPrisma();
   return prisma.session.create({
     data: {
       id: randomUUID(),
@@ -32,6 +34,7 @@ export async function createSession(userId: string) {
 }
 
 export async function getSessionWithUser(sessionId: string) {
+  const prisma = getPrisma();
   return prisma.session.findUnique({
     where: { id: sessionId },
     include: {
@@ -41,12 +44,14 @@ export async function getSessionWithUser(sessionId: string) {
 }
 
 export async function deleteSession(sessionId: string) {
+  const prisma = getPrisma();
   await prisma.session.deleteMany({
     where: { id: sessionId },
   });
 }
 
 export async function deleteExpiredSession(sessionId: string) {
+  const prisma = getPrisma();
   await prisma.session.deleteMany({
     where: {
       id: sessionId,

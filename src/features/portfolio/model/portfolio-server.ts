@@ -4,7 +4,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 
 import type { PortfolioHistoryItem } from "@/src/features/portfolio/model/history";
 import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
-import { prisma } from "@/src/lib/db";
+import { getPrisma } from "@/src/lib/db";
 import type { PortfolioState } from "@/src/features/portfolio/model/types";
 
 const DECIMAL_SCALE = 8;
@@ -110,12 +110,14 @@ async function getOrCreatePortfolioRecord(
 }
 
 export async function getPortfolioState(userId: string) {
+  const prisma = getPrisma();
   const portfolio = await getOrCreatePortfolioRecord(prisma, userId);
 
   return mapPortfolioState(portfolio);
 }
 
 export async function getPortfolioHistory(userId: string) {
+  const prisma = getPrisma();
   const portfolio = await getOrCreatePortfolioRecord(prisma, userId);
   const transactions = await prisma.portfolioTransaction.findMany({
     where: {
@@ -131,6 +133,7 @@ export async function depositFunds(params: {
   userId: string;
   amount: number;
 }) {
+  const prisma = getPrisma();
   const { amount, userId } = params;
 
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -172,6 +175,7 @@ export async function tradeCurrency(params: {
   rate: number;
   fee?: number;
 }) {
+  const prisma = getPrisma();
   const { amount, code, fee = 0, rate, side, userId } = params;
 
   if (
@@ -325,6 +329,7 @@ export async function tradeStock(params: {
   price: number;
   fee?: number;
 }) {
+  const prisma = getPrisma();
   const { fee = 0, price, quantity, side, ticker, userId } = params;
 
   if (
