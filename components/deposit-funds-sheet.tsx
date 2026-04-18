@@ -89,11 +89,8 @@ export function DepositFundsSheet({
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="10000"
+              maxLength={999999}
             />
-          </div>
-          <div className="text-muted-foreground rounded-lg border border-dashed p-3 text-sm">
-            Быстрые идеи для следующего шага: сюда же можно добавить выбор
-            счета, способ пополнения и затем buy/sell форму с тем же паттерном.
           </div>
         </div>
         <SheetFooter>
