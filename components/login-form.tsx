@@ -1,7 +1,6 @@
 "use client";
 
 import { startTransition, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   RiArrowRightLine,
@@ -60,6 +59,7 @@ const productHighlights = [
 export function LoginForm({ className, ...props }: LoginFormProps) {
   const router = useRouter();
   const [isOtpVisible, setIsOtpVisible] = useState(false);
+  const [isInviteSignupVisible, setIsInviteSignupVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -82,23 +82,40 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
     const payload = {
       login: String(formData.get("login") ?? ""),
       password: String(formData.get("password") ?? ""),
+      confirmPassword: String(formData.get("confirmPassword") ?? ""),
+      inviteCode: String(formData.get("inviteCode") ?? ""),
     };
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        isInviteSignupVisible ? "/api/auth/register" : "/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            isInviteSignupVisible
+              ? payload
+              : {
+                  login: payload.login,
+                  password: payload.password,
+                }
+          ),
+        }
+      );
 
-      const data = (await response.json().catch(() => null)) as
-        | { message?: string }
-        | null;
+      const data = (await response.json().catch(() => null)) as {
+        message?: string;
+      } | null;
 
       if (!response.ok) {
-        setErrorMessage(data?.message ?? "Не удалось выполнить вход.");
+        setErrorMessage(
+          data?.message ??
+            (isInviteSignupVisible
+              ? "Не удалось создать аккаунт."
+              : "Не удалось выполнить вход.")
+        );
         return;
       }
 
@@ -107,7 +124,11 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
         router.refresh();
       });
     } catch {
-      setErrorMessage("Не удалось выполнить вход. Проверьте соединение и попробуйте снова.");
+      setErrorMessage(
+        isInviteSignupVisible
+          ? "Не удалось создать аккаунт. Проверьте соединение и попробуйте снова."
+          : "Не удалось выполнить вход. Проверьте соединение и попробуйте снова."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -156,12 +177,20 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                 <div className="flex items-center gap-3">
                   <FieldLabel htmlFor="password">Пароль</FieldLabel>
                   {!isOtpVisible && (
-                    <Link
-                      href="#"
+                    <button
+                      type="button"
                       className="text-muted-foreground hover:text-foreground ml-auto text-sm underline-offset-4 hover:underline"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        setErrorMessage(null);
+                        setIsOtpVisible(false);
+                        setIsInviteSignupVisible((current) => !current);
+                      }}
                     >
-                      Забыли пароль?
-                    </Link>
+                      {isInviteSignupVisible
+                        ? "У меня уже есть аккаунт"
+                        : "Создать аккаунт по коду"}
+                    </button>
                   )}
                 </div>
                 {isOtpVisible ? (
@@ -187,13 +216,51 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                     id="password"
                     name="password"
                     type="password"
-                    autoComplete="current-password"
+                    autoComplete={
+                      isInviteSignupVisible
+                        ? "new-password"
+                        : "current-password"
+                    }
                     className="h-11 text-sm"
                     disabled={isSubmitting}
                     required
                   />
                 )}
               </Field>
+
+              {isInviteSignupVisible ? (
+                <>
+                  <Field>
+                    <FieldLabel htmlFor="confirmPassword">
+                      Подтверждение пароля
+                    </FieldLabel>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      className="h-11 text-sm"
+                      disabled={isSubmitting}
+                      required
+                    />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="inviteCode">Код доступа</FieldLabel>
+                    <Input
+                      id="inviteCode"
+                      name="inviteCode"
+                      type="text"
+                      className="h-11 text-sm"
+                      disabled={isSubmitting}
+                      required
+                    />
+                    <FieldDescription>
+                      Нужен один раз, чтобы создать новый аккаунт.
+                    </FieldDescription>
+                  </Field>
+                </>
+              ) : null}
 
               {errorMessage ? (
                 <Field>
@@ -213,11 +280,15 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   {isSubmitting ? (
                     <>
                       <Spinner data-icon="inline-start" />
-                      Выполняем вход
+                      {isInviteSignupVisible
+                        ? "Создаём аккаунт"
+                        : "Выполняем вход"}
                     </>
                   ) : (
                     <>
-                      Войти в систему
+                      {isInviteSignupVisible
+                        ? "Создать аккаунт"
+                        : "Войти в систему"}
                       <RiArrowRightLine data-icon="inline-end" />
                     </>
                   )}
@@ -232,8 +303,12 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   type="button"
                   size="lg"
                   className="h-11 w-full text-sm"
-                  disabled={isSubmitting}
-                  onClick={() => setIsOtpVisible((current) => !current)}
+                  disabled={isSubmitting || isInviteSignupVisible}
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setIsInviteSignupVisible(false);
+                    setIsOtpVisible((current) => !current);
+                  }}
                 >
                   <RiKey2Line data-icon="inline-start" />
                   {isOtpVisible ? "Скрыть OTP" : "Войти через OTP"}

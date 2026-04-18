@@ -22,6 +22,19 @@ export async function findUserByLogin(login: string) {
   });
 }
 
+export async function createUser(params: {
+  login: string;
+  passwordHash: string;
+}) {
+  const prisma = getPrisma();
+  return prisma.user.create({
+    data: {
+      login: params.login,
+      passwordHash: params.passwordHash,
+    },
+  });
+}
+
 export async function createSession(userId: string) {
   const prisma = getPrisma();
   return prisma.session.create({
@@ -72,7 +85,10 @@ export function getSessionExpiryDate() {
 
 export function getSessionCookieOptions(
   expiresAt: Date
-): Pick<ResponseCookie, "httpOnly" | "sameSite" | "secure" | "path" | "expires"> {
+): Pick<
+  ResponseCookie,
+  "httpOnly" | "sameSite" | "secure" | "path" | "expires"
+> {
   return {
     httpOnly: true,
     sameSite: "lax",
