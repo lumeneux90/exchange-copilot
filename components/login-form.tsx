@@ -34,6 +34,10 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  getRegisterErrorMessage,
+  registerSchema,
+} from "@/src/lib/auth-validation";
 
 type LoginFormProps = React.ComponentProps<"div">;
 
@@ -86,6 +90,19 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
       inviteCode: String(formData.get("inviteCode") ?? ""),
     };
 
+    if (isInviteSignupVisible) {
+      const parsed = registerSchema.safeParse(payload);
+
+      if (!parsed.success) {
+        setErrorMessage(
+          getRegisterErrorMessage(parsed.error.flatten().fieldErrors) ??
+            "Некорректные данные формы."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const response = await fetch(
         isInviteSignupVisible ? "/api/auth/register" : "/api/auth/login",
@@ -107,10 +124,20 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
 
       const data = (await response.json().catch(() => null)) as {
         message?: string;
+        issues?: {
+          fieldErrors?: Record<string, string[] | undefined>;
+        };
       } | null;
 
       if (!response.ok) {
         setErrorMessage(
+          (isInviteSignupVisible
+            ? getRegisterErrorMessage(
+                (data?.issues?.fieldErrors ?? {}) as Parameters<
+                  typeof getRegisterErrorMessage
+                >[0]
+              )
+            : null) ??
           data?.message ??
             (isInviteSignupVisible
               ? "Не удалось создать аккаунт."
