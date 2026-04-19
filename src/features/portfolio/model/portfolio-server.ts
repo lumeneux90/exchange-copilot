@@ -4,6 +4,16 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 
 import type { PortfolioHistoryItem } from "@/src/features/portfolio/model/history";
 import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
+import {
+  getWindowStart,
+  getRemainingCooldownMinutes,
+  MAX_DEPOSIT_AMOUNT,
+  MONTHLY_DEPOSIT_LIMIT,
+  MONTHLY_DEPOSIT_WINDOW_DAYS,
+  MIN_DEPOSIT_AMOUNT,
+  WEEKLY_DEPOSIT_LIMIT,
+  WEEKLY_DEPOSIT_WINDOW_DAYS,
+} from "@/src/features/portfolio/model/deposit-rules";
 import { getPrisma } from "@/src/lib/db";
 import type { PortfolioState } from "@/src/features/portfolio/model/types";
 
@@ -136,18 +146,106 @@ export async function depositFunds(params: {
   const prisma = getPrisma();
   const { amount, userId } = params;
 
-  if (!Number.isFinite(amount) || amount <= 0) {
+  if (!Number.isFinite(amount) || amount < MIN_DEPOSIT_AMOUNT) {
     throw new Error("Некорректная сумма пополнения.");
+  }
+
+  if (amount > MAX_DEPOSIT_AMOUNT) {
+    throw new Error(
+      `Сумма одного пополнения не должна превышать ${MAX_DEPOSIT_AMOUNT.toLocaleString(
+        "ru-RU"
+      )} RUB.`
+    );
   }
 
   const portfolio = await prisma.$transaction(async (tx) => {
     const currentPortfolio = await getOrCreatePortfolioRecord(tx, userId);
+    const now = new Date();
+    const lastDeposit = await tx.portfolioTransaction.findFirst({
+      where: {
+        portfolioId: currentPortfolio.id,
+        type: "DEPOSIT",
+      },
+      orderBy: [{ executedAt: "desc" }, { createdAt: "desc" }],
+      select: {
+        executedAt: true,
+      },
+    });
+
+    if (lastDeposit) {
+      const remainingCooldownMinutes = getRemainingCooldownMinutes(
+        lastDeposit.executedAt
+      );
+
+      if (remainingCooldownMinutes > 0) {
+        throw new Error(
+          `Слишком частые пополнения. Следующее пополнение будет доступно примерно через ${remainingCooldownMinutes} мин.`
+        );
+      }
+    }
+
+    const [weeklyDeposits, monthlyDeposits] = await Promise.all([
+      tx.portfolioTransaction.aggregate({
+        where: {
+          portfolioId: currentPortfolio.id,
+          type: "DEPOSIT",
+          executedAt: {
+            gte: getWindowStart(WEEKLY_DEPOSIT_WINDOW_DAYS, now),
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      tx.portfolioTransaction.aggregate({
+        where: {
+          portfolioId: currentPortfolio.id,
+          type: "DEPOSIT",
+          executedAt: {
+            gte: getWindowStart(MONTHLY_DEPOSIT_WINDOW_DAYS, now),
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]);
+
+    const weeklyAmount = toNumber(weeklyDeposits._sum.amount);
+    const monthlyAmount = toNumber(monthlyDeposits._sum.amount);
+
+    if (weeklyAmount + amount > WEEKLY_DEPOSIT_LIMIT) {
+      const remainingWeeklyLimit = Math.max(
+        0,
+        WEEKLY_DEPOSIT_LIMIT - weeklyAmount
+      );
+
+      throw new Error(
+        `Превышен лимит пополнений за 7 дней. Доступно еще ${remainingWeeklyLimit.toLocaleString(
+          "ru-RU"
+        )} RUB из ${WEEKLY_DEPOSIT_LIMIT.toLocaleString("ru-RU")} RUB.`
+      );
+    }
+
+    if (monthlyAmount + amount > MONTHLY_DEPOSIT_LIMIT) {
+      const remainingMonthlyLimit = Math.max(
+        0,
+        MONTHLY_DEPOSIT_LIMIT - monthlyAmount
+      );
+
+      throw new Error(
+        `Превышен лимит пополнений за 30 дней. Доступно еще ${remainingMonthlyLimit.toLocaleString(
+          "ru-RU"
+        )} RUB из ${MONTHLY_DEPOSIT_LIMIT.toLocaleString("ru-RU")} RUB.`
+      );
+    }
 
     await tx.portfolioTransaction.create({
       data: {
         portfolioId: currentPortfolio.id,
         type: "DEPOSIT",
         amount: toDecimal(amount),
+        executedAt: now,
       },
     });
 

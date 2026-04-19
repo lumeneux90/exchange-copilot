@@ -15,9 +15,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  getDepositCooldownHours,
+  MAX_DEPOSIT_AMOUNT,
+  MONTHLY_DEPOSIT_LIMIT,
+  MIN_DEPOSIT_AMOUNT,
+  WEEKLY_DEPOSIT_LIMIT,
+} from "@/src/features/portfolio/model/deposit-rules";
 import { usePortfolio } from "@/src/features/portfolio/model/portfolio-context";
 import { getErrorMessage } from "@/src/lib/errors";
-import { parseDecimalInput } from "@/src/lib/money";
+import { parseDecimalInput, rubFormatterRounded } from "@/src/lib/money";
 
 export function DepositFundsSheet({
   triggerLabel = "Пополнить счет",
@@ -37,7 +44,22 @@ export function DepositFundsSheet({
   const [amount, setAmount] = React.useState("10000");
 
   const parsedAmount = parseDecimalInput(amount);
-  const isValidAmount = parsedAmount > 0;
+  const isValidAmount =
+    parsedAmount >= MIN_DEPOSIT_AMOUNT && parsedAmount <= MAX_DEPOSIT_AMOUNT;
+  const helperText =
+    parsedAmount > MAX_DEPOSIT_AMOUNT
+      ? `Максимум за одно пополнение: ${rubFormatterRounded.format(
+          MAX_DEPOSIT_AMOUNT
+        )}.`
+      : `Одно пополнение: от ${rubFormatterRounded.format(
+          MIN_DEPOSIT_AMOUNT
+        )} до ${rubFormatterRounded.format(
+          MAX_DEPOSIT_AMOUNT
+        )}. Кулдаун: ${getDepositCooldownHours()} ч. Лимиты: ${rubFormatterRounded.format(
+          WEEKLY_DEPOSIT_LIMIT
+        )} за 7 дней и ${rubFormatterRounded.format(
+          MONTHLY_DEPOSIT_LIMIT
+        )} за 30 дней.`;
 
   async function handleSubmit() {
     if (!isValidAmount) {
@@ -75,7 +97,8 @@ export function DepositFundsSheet({
         <SheetHeader>
           <SheetTitle>Пополнение счета</SheetTitle>
           <SheetDescription>
-            Пополнение выполняется моментально.
+            Пополнение выполняется моментально, но защищено лимитом и паузой
+            между попытками.
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-1 flex-col gap-4 px-6">
@@ -89,8 +112,15 @@ export function DepositFundsSheet({
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="10000"
-              maxLength={999999}
+              maxLength={12}
+              aria-describedby="deposit-amount-help"
             />
+            <p
+              id="deposit-amount-help"
+              className="text-xs leading-relaxed text-muted-foreground"
+            >
+              {helperText}
+            </p>
           </div>
         </div>
         <SheetFooter>
