@@ -32,12 +32,6 @@ import {
   rubFormatterRounded,
 } from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@/components/ui/item";
 
 const allocationChartConfig = {
   cash: {
@@ -70,16 +64,15 @@ export function SidebarPortfolioCard({
       : snapshot.totalProfitLoss < 0
         ? "text-red-600 dark:text-red-400"
         : "text-muted-foreground";
-  const investedValue = snapshot.marketValue + snapshot.currenciesMarketValue;
   const totalValue = snapshot.totalValue || 0;
   const segmentValues = {
     cash: snapshot.cashBalance,
     stocks: snapshot.marketValue,
     fx: snapshot.currenciesMarketValue,
   } as const;
-  const visibleSegmentKeys = (Object.entries(segmentValues) as Array<
-    [keyof typeof segmentValues, number]
-  >)
+  const visibleSegmentKeys = (
+    Object.entries(segmentValues) as Array<[keyof typeof segmentValues, number]>
+  )
     .filter(([, value]) => value > 0)
     .map(([key]) => key);
   const firstVisibleSegmentKey = visibleSegmentKeys[0] ?? null;
@@ -232,14 +225,6 @@ export function SidebarPortfolioCard({
                 </div>
               ))}
             </div>
-            <Item variant="outline">
-              <ItemContent>
-                <ItemTitle>Инвестировано</ItemTitle>
-                <ItemDescription>
-                  {rubFormatterRounded.format(investedValue)}
-                </ItemDescription>
-              </ItemContent>
-            </Item>
           </CardContent>
           <CardFooter className="grid grid-cols-2 gap-2">
             <Button

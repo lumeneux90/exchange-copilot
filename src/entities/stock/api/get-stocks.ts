@@ -53,6 +53,44 @@ function getOpeningPrice(data: {
   return Number.isFinite(openingPrice) ? openingPrice : 0;
 }
 
+function getFirstFiniteColumnValue(
+  row: MoexRow,
+  columns: string[],
+  columnNames: string[]
+) {
+  for (const columnName of columnNames) {
+    const value = Number(getColumnValue(row, columns, columnName) ?? 0);
+
+    if (Number.isFinite(value) && value > 0) {
+      return value;
+    }
+  }
+
+  return 0;
+}
+
+function getTradedValue(data: {
+  marketData?: MoexRow;
+  marketDataColumns: string[];
+}) {
+  return getFirstFiniteColumnValue(data.marketData ?? [], data.marketDataColumns, [
+    "VALTODAY",
+    "VALUE",
+    "VALTOUSDAY",
+  ]);
+}
+
+function getTradedVolume(data: {
+  marketData?: MoexRow;
+  marketDataColumns: string[];
+}) {
+  return getFirstFiniteColumnValue(data.marketData ?? [], data.marketDataColumns, [
+    "VOLTODAY",
+    "VOLUME",
+    "NUMTRADES",
+  ]);
+}
+
 function getApproximateMarketCap(
   security: MoexRow,
   columns: string[],
@@ -89,6 +127,8 @@ export function mapMoexToStock(data: {
   const change = safePrice - safeOpeningPrice;
   const changePercent =
     safeOpeningPrice > 0 ? (change / safeOpeningPrice) * 100 : 0;
+  const tradedValue = getTradedValue(data);
+  const tradedVolume = getTradedVolume(data);
 
   return {
     ticker,
@@ -97,6 +137,8 @@ export function mapMoexToStock(data: {
     openingPrice: safeOpeningPrice,
     change,
     changePercent: Number.isFinite(changePercent) ? changePercent : 0,
+    tradedValue,
+    tradedVolume,
   };
 }
 

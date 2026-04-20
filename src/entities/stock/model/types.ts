@@ -5,4 +5,6 @@ export type Stock = {
   openingPrice: number;
   change: number;
   changePercent: number;
+  tradedValue: number;
+  tradedVolume: number;
 };

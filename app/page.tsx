@@ -10,40 +10,25 @@ function getMarketSummary(
   stocks: Awaited<ReturnType<typeof getStocks>>,
   moexIndex: Awaited<ReturnType<typeof getMoexIndex>>
 ) {
-  const gainers = stocks.filter((stock) => stock.changePercent > 0).length;
-  const losers = stocks.filter((stock) => stock.changePercent < 0).length;
-  const averageChangePercent =
-    stocks.reduce((sum, stock) => sum + stock.changePercent, 0) /
-    (stocks.length || 1);
-  const strongestGainer =
-    stocks.reduce<(typeof stocks)[number] | null>((current, stock) => {
-      if (!current) {
-        return stock;
-      }
-
-      return stock.changePercent > current.changePercent ? stock : current;
-    }, null) ?? stocks[0];
-  const strongestLoser =
-    stocks.reduce<(typeof stocks)[number] | null>((current, stock) => {
-      if (!current) {
-        return stock;
-      }
-
-      return stock.changePercent < current.changePercent ? stock : current;
-    }, null) ?? stocks[0];
+  const mostActiveStocks = [...stocks]
+    .sort((left, right) => right.tradedValue - left.tradedValue)
+    .slice(0, 5);
+  const topGainers = [...stocks]
+    .filter((stock) => stock.changePercent > 0)
+    .sort((left, right) => right.changePercent - left.changePercent)
+    .slice(0, 5);
+  const topLosers = [...stocks]
+    .filter((stock) => stock.changePercent < 0)
+    .sort((left, right) => left.changePercent - right.changePercent)
+    .slice(0, 5);
 
   return {
-    averageChangePercent,
-    gainers,
-    losers,
     moexIndexChangePercent: moexIndex?.changePercent ?? 0,
     moexIndexLabel: moexIndex?.shortName ?? "Индекс Мосбиржи",
     moexIndexValue: moexIndex?.currentValue ?? 0,
-    totalStocks: stocks.length,
-    strongestGainerChangePercent: strongestGainer?.changePercent ?? 0,
-    strongestGainerLabel: strongestGainer ? strongestGainer.ticker : "n/a",
-    strongestLoserChangePercent: strongestLoser?.changePercent ?? 0,
-    strongestLoserLabel: strongestLoser ? strongestLoser.ticker : "n/a",
+    mostActiveStocks,
+    topGainers,
+    topLosers,
   };
 }
 
