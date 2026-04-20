@@ -7,7 +7,6 @@ import {
   RiBarChartBoxLine,
   RiCommandLine,
   RiExchangeDollarLine,
-  RiLockPasswordLine,
   RiShieldCheckLine,
 } from "@remixicon/react";
 
@@ -30,6 +29,7 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   PASSCODE_SETUP_PENDING_SESSION_KEY,
   PASSCODE_STORAGE_KEY,
+  PASSCODE_UNLOCKED_SESSION_KEY,
   PASSCODE_SKIP_ONCE_SESSION_KEY,
 } from "@/src/features/passcode/model/storage";
 import {
@@ -128,7 +128,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                 >[0]
               )
             : null) ??
-          data?.message ??
+            data?.message ??
             (isInviteSignupVisible
               ? "Не удалось создать аккаунт."
               : "Не удалось выполнить вход.")
@@ -143,6 +143,10 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
 
         window.sessionStorage.setItem(
           PASSCODE_SKIP_ONCE_SESSION_KEY,
+          payload.login
+        );
+        window.sessionStorage.setItem(
+          PASSCODE_UNLOCKED_SESSION_KEY,
           payload.login
         );
 
@@ -189,15 +193,6 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   <h1 className="text-3xl font-semibold tracking-tight">
                     Вход на торговую площадку
                   </h1>
-                  <p className="text-muted-foreground max-w-md text-sm sm:text-base">
-                    Авторизуйтесь, чтобы открыть обзор рынка, портфель и
-                    инструменты для управления сделками.
-                  </p>
-                  <div className="text-muted-foreground flex items-center gap-2 text-xs sm:text-sm">
-                    <RiLockPasswordLine />
-                    После первого входа можно включить 4-значный pass code для
-                    быстрого доступа в рамках активной сессии.
-                  </div>
                 </div>
               </div>
 
@@ -237,9 +232,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                   name="password"
                   type="password"
                   autoComplete={
-                    isInviteSignupVisible
-                      ? "new-password"
-                      : "current-password"
+                    isInviteSignupVisible ? "new-password" : "current-password"
                   }
                   className="h-11 text-sm"
                   disabled={isSubmitting}

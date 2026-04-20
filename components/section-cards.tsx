@@ -161,19 +161,10 @@ function MarketTopList({
     );
   }
 
-  const maxAbsoluteChange = Math.max(
-    ...items.map((item) => Math.abs(item.changePercent)),
-    1
-  );
-
   return (
     <div className="space-y-1">
       {items.map((item) => {
         const direction = getTrendDirection(item.changePercent);
-        const progressWidth = `${Math.max(
-          (Math.abs(item.changePercent) / maxAbsoluteChange) * 100,
-          10
-        )}%`;
 
         return (
           <button
@@ -184,8 +175,8 @@ function MarketTopList({
             className={cn(
               "grid w-full items-center gap-3 rounded-2xl px-1 py-2 text-left transition-colors",
               secondaryMetric === "turnover"
-                ? "grid-cols-[minmax(0,1fr)_120px_112px]"
-                : "grid-cols-[minmax(0,1fr)_140px_112px]",
+                ? "grid-cols-[minmax(0,1fr)_96px] sm:grid-cols-[minmax(0,1fr)_120px_112px]"
+                : "grid-cols-[minmax(0,1fr)_112px]",
               isInteractive
                 ? "cursor-pointer hover:bg-muted/40"
                 : "cursor-default"
@@ -197,49 +188,67 @@ function MarketTopList({
                 name={item.name}
                 className="size-11 rounded-full border-0"
               />
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium md:text-[15px]">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm leading-tight font-medium md:text-[15px] sm:truncate">
                   {item.name}
                 </div>
-                <div className="text-muted-foreground truncate text-sm tracking-[0.08em] uppercase">
+                <div className="text-muted-foreground text-sm tracking-[0.08em] uppercase sm:truncate">
                   {item.ticker}
                 </div>
               </div>
             </div>
 
             {secondaryMetric === "turnover" ? (
-              <div className="text-muted-foreground w-full text-center text-sm tabular-nums">
-                {formatTurnoverMillions(item.tradedValue)}
-              </div>
-            ) : (
-              <div className="bg-muted/60 hidden h-2 w-full overflow-hidden rounded-full md:block">
+              <div className="w-full text-right">
+                <div className="text-sm font-medium tabular-nums md:text-[15px]">
+                  {formatTurnoverMillions(item.tradedValue)}
+                </div>
                 <div
                   className={cn(
-                    "h-full rounded-full",
-                    direction === "positive" && "bg-primary",
-                    direction === "negative" && "bg-destructive",
-                    direction === "neutral" && "bg-muted-foreground"
+                    "text-sm font-medium tabular-nums sm:hidden",
+                    direction === "positive" && "text-primary",
+                    direction === "negative" && "text-destructive",
+                    direction === "neutral" && "text-muted-foreground"
                   )}
-                  style={{ width: progressWidth }}
-                />
+                >
+                  {formatPercent(item.changePercent)}
+                </div>
+              </div>
+            ) : null}
+
+            {secondaryMetric === "turnover" ? (
+              <div className="hidden w-full text-right sm:block">
+                <div className="text-sm font-medium tabular-nums md:text-[15px]">
+                  {formatPrice(item.price)}
+                </div>
+                <div
+                  className={cn(
+                    "text-sm font-medium tabular-nums",
+                    direction === "positive" && "text-primary",
+                    direction === "negative" && "text-destructive",
+                    direction === "neutral" && "text-muted-foreground"
+                  )}
+                >
+                  {formatPercent(item.changePercent)}
+                </div>
+              </div>
+            ) : (
+              <div className="w-full text-right">
+                <div className="text-sm font-medium tabular-nums md:text-[15px]">
+                  {formatPrice(item.price)}
+                </div>
+                <div
+                  className={cn(
+                    "text-sm font-medium tabular-nums",
+                    direction === "positive" && "text-primary",
+                    direction === "negative" && "text-destructive",
+                    direction === "neutral" && "text-muted-foreground"
+                  )}
+                >
+                  {formatPercent(item.changePercent)}
+                </div>
               </div>
             )}
-
-            <div className="w-full text-right">
-              <div className="text-sm font-medium tabular-nums md:text-[15px]">
-                {formatPrice(item.price)}
-              </div>
-              <div
-                className={cn(
-                  "text-sm font-medium tabular-nums",
-                  direction === "positive" && "text-primary",
-                  direction === "negative" && "text-destructive",
-                  direction === "neutral" && "text-muted-foreground"
-                )}
-              >
-                {formatPercent(item.changePercent)}
-              </div>
-            </div>
           </button>
         );
       })}
