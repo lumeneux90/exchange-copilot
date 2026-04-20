@@ -83,27 +83,17 @@ export function PortfolioOverview({
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <Card>
           <CardHeader>
-              <CardDescription>Общая стоимость</CardDescription>
-              <CardTitle className="text-2xl font-semibold">
+            <CardDescription>Общая стоимость</CardDescription>
+            <CardTitle className="text-2xl font-semibold">
               {rubFormatterRounded.format(snapshot.totalValue)}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-              <CardDescription>Свободные деньги</CardDescription>
-              <CardTitle className="text-2xl font-semibold">
+            <CardDescription>Свободные деньги</CardDescription>
+            <CardTitle className="text-2xl font-semibold">
               {rubFormatterRounded.format(snapshot.cashBalance)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-              <CardDescription>Инвестировано</CardDescription>
-              <CardTitle className="text-2xl font-semibold">
-              {rubFormatterRounded.format(
-                snapshot.marketValue + snapshot.currenciesMarketValue
-              )}
             </CardTitle>
           </CardHeader>
         </Card>
