@@ -27,14 +27,12 @@ type PortfolioContextValue = {
     side: "buy" | "sell";
     amount: number;
     rate: number;
-    fee?: number;
   }) => Promise<void>;
   tradeStock: (params: {
     ticker: string;
     side: "buy" | "sell";
     quantity: number;
     price: number;
-    fee?: number;
   }) => Promise<void>;
 };
 
@@ -136,7 +134,8 @@ export function buildPortfolioSnapshot(
     (sum, currency) => sum + currency.marketValue,
     0
   );
-  const totalValue = portfolio.cashBalance + marketValue + currenciesMarketValue;
+  const totalValue =
+    portfolio.cashBalance + marketValue + currenciesMarketValue;
   const totalProfitLoss =
     marketValue +
     currenciesMarketValue -
@@ -212,13 +211,11 @@ export function PortfolioProvider({
     async ({
       amount,
       code,
-      fee = 0,
       side,
       rate,
     }: {
       amount: number;
       code: string;
-      fee?: number;
       side: "buy" | "sell";
       rate: number;
     }) => {
@@ -227,9 +224,7 @@ export function PortfolioProvider({
         !Number.isFinite(amount) ||
         amount <= 0 ||
         !Number.isFinite(rate) ||
-        rate <= 0 ||
-        !Number.isFinite(fee) ||
-        fee < 0
+        rate <= 0
       ) {
         throw new Error("Некорректные параметры валютной сделки.");
       }
@@ -240,7 +235,6 @@ export function PortfolioProvider({
         const result = await tradeCurrencyAction({
           amount,
           code,
-          fee,
           side,
           rate,
         });
@@ -259,7 +253,6 @@ export function PortfolioProvider({
 
   const tradeStock = React.useCallback(
     async ({
-      fee = 0,
       price,
       quantity,
       side,
@@ -269,16 +262,14 @@ export function PortfolioProvider({
       side: "buy" | "sell";
       quantity: number;
       price: number;
-      fee?: number;
     }) => {
       if (
         !ticker ||
         !Number.isFinite(quantity) ||
         quantity <= 0 ||
+        !Number.isInteger(quantity) ||
         !Number.isFinite(price) ||
-        price <= 0 ||
-        !Number.isFinite(fee) ||
-        fee < 0
+        price <= 0
       ) {
         throw new Error("Некорректные параметры сделки по акции.");
       }
@@ -287,7 +278,6 @@ export function PortfolioProvider({
 
       try {
         const result = await tradeStockAction({
-          fee,
           price,
           quantity,
           side,
@@ -315,7 +305,14 @@ export function PortfolioProvider({
       tradeCurrency,
       tradeStock,
     }),
-    [depositFunds, isPending, portfolio, refreshPortfolio, tradeCurrency, tradeStock]
+    [
+      depositFunds,
+      isPending,
+      portfolio,
+      refreshPortfolio,
+      tradeCurrency,
+      tradeStock,
+    ]
   );
 
   return (

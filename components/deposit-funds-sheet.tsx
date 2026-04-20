@@ -92,7 +92,11 @@ export function DepositFundsSheet({
       </SheetTrigger>
       <SheetContent
         side={side}
-        className={side === "bottom" ? "max-h-[85vh]" : "sm:max-w-md"}
+        className={
+          side === "bottom"
+            ? "max-h-[100dvh]"
+            : "h-[100dvh] sm:max-w-md"
+        }
       >
         <SheetHeader>
           <SheetTitle>Пополнение счета</SheetTitle>
@@ -101,7 +105,7 @@ export function DepositFundsSheet({
             между попытками.
           </SheetDescription>
         </SheetHeader>
-        <div className="flex flex-1 flex-col gap-4 px-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 pb-4">
           <div className="space-y-2">
             <label htmlFor="deposit-amount" className="text-sm font-medium">
               Сумма пополнения, RUB
@@ -117,7 +121,7 @@ export function DepositFundsSheet({
             />
             <p
               id="deposit-amount-help"
-              className="text-xs leading-relaxed text-muted-foreground"
+              className="text-muted-foreground text-xs leading-relaxed"
             >
               {helperText}
             </p>

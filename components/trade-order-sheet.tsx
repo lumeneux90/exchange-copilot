@@ -24,12 +24,38 @@ import {
   usePortfolio,
 } from "@/src/features/portfolio/model/portfolio-context";
 import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
+import { calculateStockTradeFee } from "@/src/features/portfolio/model/stock-trade-fees";
 import { getErrorMessage } from "@/src/lib/errors";
 import {
   formatSignedPercent,
   parseDecimalInput,
   rubFormatter,
 } from "@/src/lib/money";
+
+type TradeSide = "buy" | "sell";
+type StockInputMode = "quantity" | "amount";
+
+function normalizeShareQuantity(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+
+  return Math.floor(value);
+}
+
+function formatStockQuantity(value: number) {
+  return new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 0,
+  }).format(normalizeShareQuantity(value));
+}
+
+function formatEditableDecimal(value: number, maximumFractionDigits = 4) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0";
+  }
+
+  return value.toFixed(maximumFractionDigits).replace(/\.?0+$/, "");
+}
 
 export function TradeOrderSheet({
   stock,
@@ -58,15 +84,30 @@ export function TradeOrderSheet({
   const [internalOpen, setInternalOpen] = React.useState(false);
   const open = openProp ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
+  const [side, setSide] = React.useState<TradeSide>("buy");
+  const [buyInputMode, setBuyInputMode] =
+    React.useState<StockInputMode>("quantity");
+  const [sellInputMode, setSellInputMode] =
+    React.useState<StockInputMode>("quantity");
   const [quantity, setQuantity] = React.useState("1");
-  const [fee, setFee] = React.useState("0");
+  const [amount, setAmount] = React.useState("1000");
 
-  const parsedQuantity = parseDecimalInput(quantity);
-  const parsedFee = parseDecimalInput(fee);
+  const inputMode = side === "buy" ? buyInputMode : sellInputMode;
+  const parsedQuantityInput = parseDecimalInput(quantity);
+  const parsedAmountInput = parseDecimalInput(amount);
   const currentPrice = stock?.price ?? 0;
+  const parsedQuantity = normalizeShareQuantity(
+    currentPrice > 0
+      ? inputMode === "quantity"
+        ? parsedQuantityInput
+        : parsedAmountInput / currentPrice
+      : 0
+  );
   const grossAmount = parsedQuantity * currentPrice;
+  const parsedFee = calculateStockTradeFee(grossAmount);
   const buyTotalAmount = grossAmount + parsedFee;
-  const sellNetAmount = Math.max(0, grossAmount - parsedFee);
+  const rawSellNetAmount = grossAmount - parsedFee;
+  const sellNetAmount = Math.max(0, rawSellNetAmount);
   const marketStatus = getStockMarketStatus();
   const isStockMarketOpen = marketStatus.isOpen;
   const triggerDisabledReason = !isStockMarketOpen
@@ -75,20 +116,67 @@ export function TradeOrderSheet({
       ? "Сделка недоступна, пока по бумаге нет актуальной цены."
       : null;
   const isTriggerDisabled = Boolean(triggerDisabledReason) || isPending;
-  const canBuy = currentPrice > 0 && parsedQuantity > 0;
+  const canBuy =
+    currentPrice > 0 &&
+    parsedQuantity > 0 &&
+    buyTotalAmount <= snapshot.cashBalance;
   const canSell =
     currentPrice > 0 &&
     parsedQuantity > 0 &&
-    parsedQuantity <= (selectedHolding?.quantity ?? 0);
+    parsedQuantity <= (selectedHolding?.quantity ?? 0) &&
+    rawSellNetAmount >= 0;
+
+  function resetForm() {
+    setSide("buy");
+    setBuyInputMode("quantity");
+    setSellInputMode("quantity");
+    setQuantity("1");
+    setAmount("1000");
+  }
+
+  function syncModeValue(nextMode: StockInputMode) {
+    if (currentPrice <= 0) {
+      return;
+    }
+
+    if (inputMode === nextMode) {
+      return;
+    }
+
+    if (nextMode === "amount") {
+      const normalizedQuantity = normalizeShareQuantity(parsedQuantityInput);
+      setAmount(formatEditableDecimal(normalizedQuantity * currentPrice, 2));
+      return;
+    }
+
+    setQuantity(
+      String(normalizeShareQuantity(parsedAmountInput / currentPrice))
+    );
+  }
+
+  function handleBuyInputModeChange(value: string) {
+    const nextMode = (value as StockInputMode) ?? "quantity";
+    syncModeValue(nextMode);
+    setBuyInputMode(nextMode);
+  }
+
+  function handleSellInputModeChange(value: string) {
+    const nextMode = (value as StockInputMode) ?? "quantity";
+    syncModeValue(nextMode);
+    setSellInputMode(nextMode);
+  }
 
   React.useEffect(() => {
     if (!open) {
-      setQuantity("1");
-      setFee("0");
+      resetForm();
     }
-  }, [open, stock?.ticker]);
+  }, [open]);
 
-  async function handleTrade(side: "buy" | "sell") {
+  React.useEffect(() => {
+    resetForm();
+  }, [stock?.ticker]);
+
+  async function handleTrade(side: TradeSide) {
     if (!stock) {
       return;
     }
@@ -99,11 +187,9 @@ export function TradeOrderSheet({
         side,
         quantity: parsedQuantity,
         price: currentPrice,
-        fee: parsedFee,
       });
       setOpen(false);
-      setQuantity("1");
-      setFee("0");
+      resetForm();
       toast.success(
         side === "buy"
           ? `${stock.ticker} добавлена в портфель.`
@@ -147,7 +233,7 @@ export function TradeOrderSheet({
           {triggerLabel}
         </SheetTrigger>
       ) : null}
-      <SheetContent side="right" className="sm:max-w-lg">
+      <SheetContent side="right" className="h-[100dvh] sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>Сделка по {stock.ticker}</SheetTitle>
           <SheetDescription>
@@ -156,7 +242,7 @@ export function TradeOrderSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-1 flex-col gap-5 px-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg border p-3">
               <div className="text-muted-foreground text-xs">
@@ -180,40 +266,76 @@ export function TradeOrderSheet({
 
           <Separator />
 
-          <Tabs defaultValue="buy" className="gap-4">
+          <Tabs
+            value={side}
+            onValueChange={(value) => setSide((value as TradeSide) ?? "buy")}
+            className="gap-4"
+          >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="buy">Купить</TabsTrigger>
-              <TabsTrigger value="sell">Продать</TabsTrigger>
+              <TabsTrigger
+                value="buy"
+                className="data-active:border-primary data-active:bg-primary data-active:text-primary-foreground"
+              >
+                Купить
+              </TabsTrigger>
+              <TabsTrigger
+                value="sell"
+                className="data-active:border-transparent data-active:bg-destructive/10 data-active:text-destructive hover:data-active:bg-destructive/20 dark:data-active:bg-destructive/20 dark:hover:data-active:bg-destructive/30"
+              >
+                Продать
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="buy" className="space-y-4">
+            <TabsContent value="buy" className="space-y-4 pb-2">
+              <Tabs
+                value={buyInputMode}
+                onValueChange={handleBuyInputModeChange}
+                className="gap-2"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="quantity">По количеству</TabsTrigger>
+                  <TabsTrigger value="amount">По сумме</TabsTrigger>
+                </TabsList>
+              </Tabs>
               <div className="space-y-2">
-                <Label htmlFor="buy-quantity">Количество</Label>
+                <Label htmlFor="buy-value">
+                  {buyInputMode === "quantity"
+                    ? "Количество"
+                    : "Сумма сделки, RUB"}
+                </Label>
                 <Input
-                  id="buy-quantity"
-                  inputMode="decimal"
-                  value={quantity}
-                  onChange={(event) => setQuantity(event.target.value)}
-                  placeholder="1"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="buy-fee">Комиссия, RUB</Label>
-                <Input
-                  id="buy-fee"
-                  inputMode="decimal"
-                  value={fee}
-                  onChange={(event) => setFee(event.target.value)}
-                  placeholder="0"
+                  id="buy-value"
+                  inputMode={
+                    buyInputMode === "quantity" ? "numeric" : "decimal"
+                  }
+                  value={buyInputMode === "quantity" ? quantity : amount}
+                  onChange={(event) =>
+                    buyInputMode === "quantity"
+                      ? setQuantity(event.target.value)
+                      : setAmount(event.target.value)
+                  }
+                  placeholder={buyInputMode === "quantity" ? "1" : "1000"}
                 />
               </div>
               <div className="grid gap-2 rounded-lg border border-dashed p-4 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    Количество бумаг
+                  </span>
+                  <span>
+                    {parsedQuantity > 0
+                      ? `${formatStockQuantity(parsedQuantity)} шт.`
+                      : "0 шт."}
+                  </span>
+                </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">Цена за бумагу</span>
                   <span>{rubFormatter.format(currentPrice)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Сумма без комиссии</span>
+                  <span className="text-muted-foreground">
+                    Сумма без комиссии
+                  </span>
                   <span>{rubFormatter.format(grossAmount)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
@@ -221,7 +343,9 @@ export function TradeOrderSheet({
                   <span>{rubFormatter.format(parsedFee)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Итого к списанию</span>
+                  <span className="text-muted-foreground">
+                    Итого к списанию
+                  </span>
                   <span>{rubFormatter.format(buyTotalAmount)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
@@ -238,7 +362,7 @@ export function TradeOrderSheet({
                   {marketStatus.reason}
                 </div>
               ) : null}
-              <SheetFooter className="px-0 pb-0">
+              <SheetFooter className="bg-popover sticky right-0 bottom-0 left-0 border-t px-0 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Отмена
                 </Button>
@@ -247,30 +371,43 @@ export function TradeOrderSheet({
                   onClick={() => void handleTrade("buy")}
                 >
                   <RiWallet3Line />
-                  Купить {parsedQuantity > 0 ? `${parsedQuantity} шт.` : ""}
+                  Купить{" "}
+                  {parsedQuantity > 0
+                    ? `${formatStockQuantity(parsedQuantity)} шт.`
+                    : ""}
                 </Button>
               </SheetFooter>
             </TabsContent>
 
-            <TabsContent value="sell" className="space-y-4">
+            <TabsContent value="sell" className="space-y-4 pb-2">
+              <Tabs
+                value={sellInputMode}
+                onValueChange={handleSellInputModeChange}
+                className="gap-2"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="quantity">По количеству</TabsTrigger>
+                  <TabsTrigger value="amount">По сумме</TabsTrigger>
+                </TabsList>
+              </Tabs>
               <div className="space-y-2">
-                <Label htmlFor="sell-quantity">Количество</Label>
+                <Label htmlFor="sell-value">
+                  {sellInputMode === "quantity"
+                    ? "Количество"
+                    : "Сумма сделки, RUB"}
+                </Label>
                 <Input
-                  id="sell-quantity"
-                  inputMode="decimal"
-                  value={quantity}
-                  onChange={(event) => setQuantity(event.target.value)}
-                  placeholder="1"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sell-fee">Комиссия, RUB</Label>
-                <Input
-                  id="sell-fee"
-                  inputMode="decimal"
-                  value={fee}
-                  onChange={(event) => setFee(event.target.value)}
-                  placeholder="0"
+                  id="sell-value"
+                  inputMode={
+                    sellInputMode === "quantity" ? "numeric" : "decimal"
+                  }
+                  value={sellInputMode === "quantity" ? quantity : amount}
+                  onChange={(event) =>
+                    sellInputMode === "quantity"
+                      ? setQuantity(event.target.value)
+                      : setAmount(event.target.value)
+                  }
+                  placeholder={sellInputMode === "quantity" ? "1" : "1000"}
                 />
               </div>
               <div className="grid gap-2 rounded-lg border border-dashed p-4 text-sm">
@@ -285,7 +422,17 @@ export function TradeOrderSheet({
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Сумма без комиссии</span>
+                  <span className="text-muted-foreground">Будет продано</span>
+                  <span>
+                    {parsedQuantity > 0
+                      ? `${formatStockQuantity(parsedQuantity)} шт.`
+                      : "0 шт."}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    Сумма без комиссии
+                  </span>
                   <span>{rubFormatter.format(grossAmount)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
@@ -318,7 +465,7 @@ export function TradeOrderSheet({
                   {marketStatus.reason}
                 </div>
               ) : null}
-              <SheetFooter className="px-0 pb-0">
+              <SheetFooter className="bg-popover sticky right-0 bottom-0 left-0 border-t px-0 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Отмена
                 </Button>
@@ -327,7 +474,10 @@ export function TradeOrderSheet({
                   disabled={!canSell || !isStockMarketOpen || isPending}
                   onClick={() => void handleTrade("sell")}
                 >
-                  Продать {parsedQuantity > 0 ? `${parsedQuantity} шт.` : ""}
+                  Продать{" "}
+                  {parsedQuantity > 0
+                    ? `${formatStockQuantity(parsedQuantity)} шт.`
+                    : ""}
                 </Button>
               </SheetFooter>
             </TabsContent>

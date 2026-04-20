@@ -3,7 +3,9 @@ import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
 import type { PortfolioHistoryItem } from "@/src/features/portfolio/model/history";
+import { calculateFxTradeFee } from "@/src/features/portfolio/model/fx-trade-fees";
 import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
+import { calculateStockTradeFee } from "@/src/features/portfolio/model/stock-trade-fees";
 import {
   getWindowStart,
   getRemainingCooldownMinutes,
@@ -32,25 +34,24 @@ function toDecimal(value: number) {
   return new Prisma.Decimal(value.toFixed(DECIMAL_SCALE));
 }
 
-function mapPortfolioTransaction(
-  transaction: {
-    id: string;
-    type: "DEPOSIT" | "BUY" | "SELL" | "FX_BUY" | "FX_SELL";
-    ticker: string | null;
-    currencyCode: string | null;
-    quantity: Prisma.Decimal | null;
-    price: Prisma.Decimal | null;
-    amount: Prisma.Decimal;
-    feeAmount: Prisma.Decimal;
-    executedAt: Date;
-  }
-): PortfolioHistoryItem {
+function mapPortfolioTransaction(transaction: {
+  id: string;
+  type: "DEPOSIT" | "BUY" | "SELL" | "FX_BUY" | "FX_SELL";
+  ticker: string | null;
+  currencyCode: string | null;
+  quantity: Prisma.Decimal | null;
+  price: Prisma.Decimal | null;
+  amount: Prisma.Decimal;
+  feeAmount: Prisma.Decimal;
+  executedAt: Date;
+}): PortfolioHistoryItem {
   return {
     id: transaction.id,
     type: transaction.type,
     ticker: transaction.ticker,
     currencyCode: transaction.currencyCode,
-    quantity: transaction.quantity == null ? null : toNumber(transaction.quantity),
+    quantity:
+      transaction.quantity == null ? null : toNumber(transaction.quantity),
     price: transaction.price == null ? null : toNumber(transaction.price),
     amount: toNumber(transaction.amount),
     feeAmount: toNumber(transaction.feeAmount),
@@ -139,10 +140,7 @@ export async function getPortfolioHistory(userId: string) {
   return transactions.map(mapPortfolioTransaction);
 }
 
-export async function depositFunds(params: {
-  userId: string;
-  amount: number;
-}) {
+export async function depositFunds(params: { userId: string; amount: number }) {
   const prisma = getPrisma();
   const { amount, userId } = params;
 
@@ -271,19 +269,17 @@ export async function tradeCurrency(params: {
   side: "buy" | "sell";
   amount: number;
   rate: number;
-  fee?: number;
 }) {
   const prisma = getPrisma();
-  const { amount, code, fee = 0, rate, side, userId } = params;
+  const { amount, code, rate, side, userId } = params;
+  const fee = calculateFxTradeFee(side === "buy" ? amount : amount * rate);
 
   if (
     !code ||
     !Number.isFinite(amount) ||
     amount <= 0 ||
     !Number.isFinite(rate) ||
-    rate <= 0 ||
-    !Number.isFinite(fee) ||
-    fee < 0
+    rate <= 0
   ) {
     throw new Error("Некорректные параметры валютной сделки.");
   }
@@ -295,8 +291,7 @@ export async function tradeCurrency(params: {
     const currentCashBalance = toNumber(currentPortfolio.cashBalance);
     const currentPosition = currentPortfolio.positions.find(
       (position) =>
-        position.type === "CURRENCY" &&
-        position.currencyCode === normalizedCode
+        position.type === "CURRENCY" && position.currencyCode === normalizedCode
     );
     const currentQuantity = toNumber(currentPosition?.quantity);
     const currentAverageRate = toNumber(currentPosition?.averageRate);
@@ -425,19 +420,18 @@ export async function tradeStock(params: {
   side: "buy" | "sell";
   quantity: number;
   price: number;
-  fee?: number;
 }) {
   const prisma = getPrisma();
-  const { fee = 0, price, quantity, side, ticker, userId } = params;
+  const { price, quantity, side, ticker, userId } = params;
+  const fee = calculateStockTradeFee(quantity * price);
 
   if (
     !ticker ||
     !Number.isFinite(quantity) ||
     quantity <= 0 ||
+    !Number.isInteger(quantity) ||
     !Number.isFinite(price) ||
-    price <= 0 ||
-    !Number.isFinite(fee) ||
-    fee < 0
+    price <= 0
   ) {
     throw new Error("Некорректные параметры сделки по акции.");
   }
@@ -446,7 +440,9 @@ export async function tradeStock(params: {
   const marketStatus = getStockMarketStatus();
 
   if (!marketStatus.isOpen) {
-    throw new Error(marketStatus.reason ?? "Торговая сессия по акциям закрыта.");
+    throw new Error(
+      marketStatus.reason ?? "Торговая сессия по акциям закрыта."
+    );
   }
 
   const portfolio = await prisma.$transaction(async (tx) => {

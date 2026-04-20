@@ -5,6 +5,7 @@ import { RiPieChartLine } from "@remixicon/react";
 import { CompanyLogo } from "@/components/company-logo";
 import { CurrencyFlag } from "@/components/currency-flag";
 import { DepositFundsSheet } from "@/components/deposit-funds-sheet";
+import { TradeOrderSheet } from "@/components/trade-order-sheet";
 import {
   Card,
   CardContent,
@@ -219,7 +220,7 @@ export function PortfolioOverview({
               return (
                 <div
                   key={holding.ticker}
-                  className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))]"
+                  className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))_auto]"
                 >
                   <div className="flex items-center gap-3">
                     <CompanyLogo
@@ -276,6 +277,14 @@ export function PortfolioOverview({
                     >
                       {formatSignedPercent(holding.profitLossPercent)}
                     </div>
+                  </div>
+                  <div className="flex items-center md:justify-end">
+                    <TradeOrderSheet
+                      stock={stock ?? null}
+                      triggerLabel="Совершить сделку"
+                      triggerVariant="outline"
+                      triggerClassName="w-full md:w-auto"
+                    />
                   </div>
                 </div>
               );
