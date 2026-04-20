@@ -18,9 +18,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FieldDescription } from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
 import {
+  PASSCODE_HYDRATION_RELOAD_SESSION_KEY,
   PASSCODE_STORAGE_KEY,
   PASSCODE_SETUP_PENDING_SESSION_KEY,
+  PASSCODE_UNLOCKED_SESSION_KEY,
   PASSCODE_SKIP_ONCE_SESSION_KEY,
 } from "@/src/features/passcode/model/storage";
 import { cn } from "@/src/lib/utils";
@@ -37,12 +40,9 @@ type StoredPasscode = {
 };
 
 type PasscodePadProps = {
-  actionLabel: string;
   description: string;
   errorMessage: string | null;
   icon: RemixiconComponentType;
-  isActionEnabled: boolean;
-  onAction: () => void;
   onBack?: (() => void) | null;
   onChange: (value: string) => void;
   title: string;
@@ -128,12 +128,9 @@ function KeypadButton({
 }
 
 function PasscodePad({
-  actionLabel,
   description,
   errorMessage,
   icon: Icon,
-  isActionEnabled,
-  onAction,
   onBack,
   onChange,
   title,
@@ -212,16 +209,6 @@ function PasscodePad({
               <RiDeleteBack2Line />
             </KeypadButton>
           </div>
-
-          <Button
-            type="button"
-            size="lg"
-            className="h-12 rounded-2xl text-sm sm:h-13"
-            disabled={!isActionEnabled}
-            onClick={onAction}
-          >
-            {actionLabel}
-          </Button>
         </div>
       </CardContent>
     </Card>
@@ -244,7 +231,7 @@ export function PasscodeGate({
   children: React.ReactNode;
   currentUser: CurrentUser;
 }) {
-  const [isReady, setIsReady] = React.useState(false);
+  const [isHydrated, setIsHydrated] = React.useState(false);
   const [isUnlocked, setIsUnlocked] = React.useState(false);
   const [needsSetup, setNeedsSetup] = React.useState(false);
   const [passcode, setPasscode] = React.useState("");
@@ -254,16 +241,41 @@ export function PasscodeGate({
     "create"
   );
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const isAutoAdvancingRef = React.useRef(false);
+  const isAutoSubmittingRef = React.useRef(false);
+  const isAutoUnlockingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    window.sessionStorage.removeItem(PASSCODE_HYDRATION_RELOAD_SESSION_KEY);
+    (
+      window as Window & {
+        __exchangePasscodeHydrated?: boolean;
+      }
+    ).__exchangePasscodeHydrated = true;
+    setIsHydrated(true);
+  }, []);
+
+  const resetUnlockFlow = React.useCallback(() => {
+    if (currentUser) {
+      window.sessionStorage.removeItem(PASSCODE_UNLOCKED_SESSION_KEY);
+      window.sessionStorage.removeItem(PASSCODE_SKIP_ONCE_SESSION_KEY);
+    }
+    setErrorMessage(null);
+    setUnlockPasscode("");
+    setIsUnlocked(false);
+  }, [currentUser]);
 
   React.useEffect(() => {
     if (!currentUser) {
-      setIsReady(true);
       setIsUnlocked(false);
       setNeedsSetup(false);
       return;
     }
 
     const storedPasscode = readStoredPasscode();
+    const unlockedSessionLogin = window.sessionStorage.getItem(
+      PASSCODE_UNLOCKED_SESSION_KEY
+    );
     const skipOnceLogin = window.sessionStorage.getItem(
       PASSCODE_SKIP_ONCE_SESSION_KEY
     );
@@ -275,6 +287,9 @@ export function PasscodeGate({
       if (storedPasscode && storedPasscode.login !== currentUser.login) {
         window.localStorage.removeItem(PASSCODE_STORAGE_KEY);
       }
+      if (unlockedSessionLogin && unlockedSessionLogin !== currentUser.login) {
+        window.sessionStorage.removeItem(PASSCODE_UNLOCKED_SESSION_KEY);
+      }
 
       setPasscode("");
       setConfirmPasscode("");
@@ -282,19 +297,56 @@ export function PasscodeGate({
       setNeedsSetup(pendingSetupLogin === currentUser.login);
       setErrorMessage(null);
       setIsUnlocked(true);
-      setIsReady(true);
+      window.sessionStorage.setItem(
+        PASSCODE_UNLOCKED_SESSION_KEY,
+        currentUser.login
+      );
       return;
     }
 
     setNeedsSetup(false);
     setErrorMessage(null);
     setUnlockPasscode("");
-    setIsUnlocked(skipOnceLogin === currentUser.login);
-    if (skipOnceLogin === currentUser.login) {
+    setIsUnlocked(
+      unlockedSessionLogin === currentUser.login ||
+        skipOnceLogin === currentUser.login
+    );
+    if (skipOnceLogin) {
       window.sessionStorage.removeItem(PASSCODE_SKIP_ONCE_SESSION_KEY);
     }
-    setIsReady(true);
   }, [currentUser]);
+
+  React.useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    const storedPasscode = readStoredPasscode();
+
+    if (!storedPasscode || storedPasscode.login !== currentUser.login) {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        resetUnlockFlow();
+      }
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        resetUnlockFlow();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pageshow", handlePageShow);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, [currentUser, resetUnlockFlow]);
 
   const handleCreatePasscode = React.useCallback(async () => {
     if (!currentUser) {
@@ -330,6 +382,10 @@ export function PasscodeGate({
     setSetupStep("create");
     setNeedsSetup(false);
     window.sessionStorage.removeItem(PASSCODE_SETUP_PENDING_SESSION_KEY);
+    window.sessionStorage.setItem(
+      PASSCODE_UNLOCKED_SESSION_KEY,
+      currentUser.login
+    );
     setIsUnlocked(true);
   }, [confirmPasscode, currentUser, passcode]);
 
@@ -341,6 +397,12 @@ export function PasscodeGate({
       setConfirmPasscode("");
       setSetupStep("create");
       setNeedsSetup(true);
+      if (currentUser) {
+        window.sessionStorage.setItem(
+          PASSCODE_UNLOCKED_SESSION_KEY,
+          currentUser.login
+        );
+      }
       setIsUnlocked(true);
       return;
     }
@@ -360,8 +422,12 @@ export function PasscodeGate({
 
     setErrorMessage(null);
     setUnlockPasscode("");
+    window.sessionStorage.setItem(
+      PASSCODE_UNLOCKED_SESSION_KEY,
+      storedPasscode.login
+    );
     setIsUnlocked(true);
-  }, [unlockPasscode]);
+  }, [currentUser, unlockPasscode]);
 
   const startConfirmStep = React.useCallback(() => {
     if (!/^\d{4}$/.test(passcode)) {
@@ -374,30 +440,108 @@ export function PasscodeGate({
     setSetupStep("confirm");
   }, [passcode]);
 
+  React.useEffect(() => {
+    if (setupStep !== "create") {
+      isAutoAdvancingRef.current = false;
+      return;
+    }
+
+    if (passcode.length !== PASSCODE_LENGTH || isAutoAdvancingRef.current) {
+      if (passcode.length !== PASSCODE_LENGTH) {
+        isAutoAdvancingRef.current = false;
+      }
+      return;
+    }
+
+    isAutoAdvancingRef.current = true;
+    startConfirmStep();
+  }, [passcode, setupStep, startConfirmStep]);
+
+  React.useEffect(() => {
+    if (!needsSetup || setupStep !== "confirm") {
+      isAutoSubmittingRef.current = false;
+      return;
+    }
+
+    if (
+      confirmPasscode.length !== PASSCODE_LENGTH ||
+      isAutoSubmittingRef.current
+    ) {
+      if (confirmPasscode.length !== PASSCODE_LENGTH) {
+        isAutoSubmittingRef.current = false;
+      }
+      return;
+    }
+
+    isAutoSubmittingRef.current = true;
+    void handleCreatePasscode().finally(() => {
+      isAutoSubmittingRef.current = false;
+    });
+  }, [confirmPasscode, handleCreatePasscode, needsSetup, setupStep]);
+
+  React.useEffect(() => {
+    if (isUnlocked) {
+      isAutoUnlockingRef.current = false;
+      return;
+    }
+
+    if (
+      unlockPasscode.length !== PASSCODE_LENGTH ||
+      isAutoUnlockingRef.current
+    ) {
+      if (unlockPasscode.length !== PASSCODE_LENGTH) {
+        isAutoUnlockingRef.current = false;
+      }
+      return;
+    }
+
+    isAutoUnlockingRef.current = true;
+    void handleUnlock().finally(() => {
+      isAutoUnlockingRef.current = false;
+    });
+  }, [handleUnlock, isUnlocked, unlockPasscode]);
+
   if (!currentUser) {
     return <>{children}</>;
   }
 
-  if (!isReady) {
+  if (!isHydrated) {
     return (
       <PasscodeShell>
-        <Card className="border-border/70 bg-card/96 w-full max-w-md py-0 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl">
-          <CardHeader className="px-6 py-8 sm:px-8">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-3xl sm:size-16">
-                <RiShieldKeyholeLine className="size-6 sm:size-7" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <CardTitle className="text-lg font-semibold sm:text-xl">
-                  Проверяем быстрый вход
-                </CardTitle>
-                <CardDescription className="max-w-sm text-sm leading-6 sm:text-base">
-                  Подготавливаем экран разблокировки для {currentUser.login}.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  window.__exchangePasscodeHydrated = false;
+                  var reloadKey = ${JSON.stringify(
+                    PASSCODE_HYDRATION_RELOAD_SESSION_KEY
+                  )};
+                  if (window.sessionStorage.getItem(reloadKey) === "1") {
+                    return;
+                  }
+                  window.setTimeout(function () {
+                    if (window.__exchangePasscodeHydrated) {
+                      return;
+                    }
+                    window.sessionStorage.setItem(reloadKey, "1");
+                    window.location.reload();
+                  }, 1500);
+                } catch (error) {}
+              })();
+            `,
+          }}
+        />
+        <div className="text-foreground/88 relative flex flex-col items-center gap-3 text-center">
+          <div className="bg-background/70 border-border/50 flex size-12 items-center justify-center rounded-full border shadow-sm backdrop-blur-md">
+            <Spinner className="text-primary size-5" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium sm:text-base">
+              Подключаем экран разблокировки
+            </p>
+          </div>
+        </div>
       </PasscodeShell>
     );
   }
@@ -410,14 +554,9 @@ export function PasscodeGate({
       {!isUnlocked ? (
         <PasscodeShell>
           <PasscodePad
-            actionLabel="Разблокировать"
             description="Введите 4-значный код для разблокировки."
             errorMessage={errorMessage}
             icon={RiShieldKeyholeLine}
-            isActionEnabled={unlockPasscode.length === PASSCODE_LENGTH}
-            onAction={() => {
-              void handleUnlock();
-            }}
             onChange={(value) => {
               setErrorMessage(null);
               setUnlockPasscode(value);
@@ -433,12 +572,9 @@ export function PasscodeGate({
           <div className="relative flex w-full flex-col items-center">
             {setupStep === "create" ? (
               <PasscodePad
-                actionLabel="Продолжить"
                 description="Придумайте 4-значный код для быстрого входа."
                 errorMessage={errorMessage}
                 icon={RiLockPasswordLine}
-                isActionEnabled={passcode.length === PASSCODE_LENGTH}
-                onAction={startConfirmStep}
                 onChange={(value) => {
                   setErrorMessage(null);
                   setPasscode(value);
@@ -448,14 +584,9 @@ export function PasscodeGate({
               />
             ) : (
               <PasscodePad
-                actionLabel="Сохранить код"
                 description="Повторите код для быстрого входа."
                 errorMessage={errorMessage}
                 icon={RiLockPasswordLine}
-                isActionEnabled={confirmPasscode.length === PASSCODE_LENGTH}
-                onAction={() => {
-                  void handleCreatePasscode();
-                }}
                 onBack={() => {
                   setErrorMessage(null);
                   setConfirmPasscode("");
