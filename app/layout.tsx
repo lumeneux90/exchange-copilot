@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       style={{ "--font-sans": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif" } as React.CSSProperties}
     >
       <body suppressHydrationWarning>
-        <Providers initialPortfolio={initialPortfolio}>
+        <Providers currentUser={user} initialPortfolio={initialPortfolio}>
           <TooltipProvider>
             {children}
             <Toaster richColors position="top-right" />

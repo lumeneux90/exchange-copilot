@@ -7,8 +7,8 @@ import {
   RiBarChartBoxLine,
   RiCommandLine,
   RiExchangeDollarLine,
+  RiLockPasswordLine,
   RiShieldCheckLine,
-  RiKey2Line,
 } from "@remixicon/react";
 
 import { Button } from "@/components/ui/button";
@@ -24,16 +24,14 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  PASSCODE_SETUP_PENDING_SESSION_KEY,
+  PASSCODE_STORAGE_KEY,
+  PASSCODE_SKIP_ONCE_SESSION_KEY,
+} from "@/src/features/passcode/model/storage";
 import {
   getRegisterErrorMessage,
   registerSchema,
@@ -62,7 +60,6 @@ const productHighlights = [
 
 export function LoginForm({ className, ...props }: LoginFormProps) {
   const router = useRouter();
-  const [isOtpVisible, setIsOtpVisible] = useState(false);
   const [isInviteSignupVisible, setIsInviteSignupVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -71,13 +68,6 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
     event
   ) => {
     event.preventDefault();
-
-    if (isOtpVisible) {
-      setErrorMessage(
-        "OTP-вход пока доступен только как UI-сценарий. Для входа используйте логин и пароль."
-      );
-      return;
-    }
 
     setErrorMessage(null);
     setIsSubmitting(true);
@@ -146,6 +136,26 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
         return;
       }
 
+      if (!isInviteSignupVisible) {
+        const hasStoredPasscode = Boolean(
+          window.localStorage.getItem(PASSCODE_STORAGE_KEY)
+        );
+
+        window.sessionStorage.setItem(
+          PASSCODE_SKIP_ONCE_SESSION_KEY,
+          payload.login
+        );
+
+        if (!hasStoredPasscode) {
+          window.sessionStorage.setItem(
+            PASSCODE_SETUP_PENDING_SESSION_KEY,
+            payload.login
+          );
+        } else {
+          window.sessionStorage.removeItem(PASSCODE_SETUP_PENDING_SESSION_KEY);
+        }
+      }
+
       startTransition(() => {
         router.push("/");
         router.refresh();
@@ -183,6 +193,11 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                     Авторизуйтесь, чтобы открыть обзор рынка, портфель и
                     инструменты для управления сделками.
                   </p>
+                  <div className="text-muted-foreground flex items-center gap-2 text-xs sm:text-sm">
+                    <RiLockPasswordLine />
+                    После первого входа можно включить 4-значный pass code для
+                    быстрого доступа в рамках активной сессии.
+                  </div>
                 </div>
               </div>
 
@@ -203,56 +218,33 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
               <Field>
                 <div className="flex items-center gap-3">
                   <FieldLabel htmlFor="password">Пароль</FieldLabel>
-                  {!isOtpVisible && (
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground ml-auto text-sm underline-offset-4 hover:underline"
-                      disabled={isSubmitting}
-                      onClick={() => {
-                        setErrorMessage(null);
-                        setIsOtpVisible(false);
-                        setIsInviteSignupVisible((current) => !current);
-                      }}
-                    >
-                      {isInviteSignupVisible
-                        ? "У меня уже есть аккаунт"
-                        : "Создать аккаунт по коду"}
-                    </button>
-                  )}
-                </div>
-                {isOtpVisible ? (
-                  <InputOTP
-                    id="login-otp"
-                    maxLength={6}
-                    containerClassName="justify-start"
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} className="size-11 text-sm" />
-                      <InputOTPSlot index={1} className="size-11 text-sm" />
-                      <InputOTPSlot index={2} className="size-11 text-sm" />
-                    </InputOTPGroup>
-                    <InputOTPSeparator />
-                    <InputOTPGroup>
-                      <InputOTPSlot index={3} className="size-11 text-sm" />
-                      <InputOTPSlot index={4} className="size-11 text-sm" />
-                      <InputOTPSlot index={5} className="size-11 text-sm" />
-                    </InputOTPGroup>
-                  </InputOTP>
-                ) : (
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete={
-                      isInviteSignupVisible
-                        ? "new-password"
-                        : "current-password"
-                    }
-                    className="h-11 text-sm"
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground ml-auto text-sm underline-offset-4 hover:underline"
                     disabled={isSubmitting}
-                    required
-                  />
-                )}
+                    onClick={() => {
+                      setErrorMessage(null);
+                      setIsInviteSignupVisible((current) => !current);
+                    }}
+                  >
+                    {isInviteSignupVisible
+                      ? "У меня уже есть аккаунт"
+                      : "Создать аккаунт по коду"}
+                  </button>
+                </div>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete={
+                    isInviteSignupVisible
+                      ? "new-password"
+                      : "current-password"
+                  }
+                  className="h-11 text-sm"
+                  disabled={isSubmitting}
+                  required
+                />
               </Field>
 
               {isInviteSignupVisible ? (
@@ -319,26 +311,6 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                       <RiArrowRightLine data-icon="inline-end" />
                     </>
                   )}
-                </Button>
-              </Field>
-
-              <FieldSeparator>или</FieldSeparator>
-
-              <Field>
-                <Button
-                  variant="outline"
-                  type="button"
-                  size="lg"
-                  className="h-11 w-full text-sm"
-                  disabled={isSubmitting || isInviteSignupVisible}
-                  onClick={() => {
-                    setErrorMessage(null);
-                    setIsInviteSignupVisible(false);
-                    setIsOtpVisible((current) => !current);
-                  }}
-                >
-                  <RiKey2Line data-icon="inline-start" />
-                  {isOtpVisible ? "Скрыть OTP" : "Войти через OTP"}
                 </Button>
               </Field>
             </FieldGroup>
