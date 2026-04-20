@@ -55,7 +55,6 @@ export async function tradeCurrencyAction(params: {
   side: "buy" | "sell";
   amount: number;
   rate: number;
-  fee?: number;
 }) {
   try {
     const userId = await requireCurrentUserId();
@@ -81,7 +80,6 @@ export async function tradeStockAction(params: {
   side: "buy" | "sell";
   quantity: number;
   price: number;
-  fee?: number;
 }) {
   try {
     const userId = await requireCurrentUserId();

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
+import { calculateFxTradeFee } from "@/src/features/portfolio/model/fx-trade-fees";
 import {
   buildPortfolioSnapshot,
   usePortfolio,
@@ -29,7 +30,6 @@ import {
 import { getErrorMessage } from "@/src/lib/errors";
 import { parseDecimalInput, rubFormatter } from "@/src/lib/money";
 
-const FX_CODES = ["USD", "EUR", "CNY", "GBP", "HKD", "AED"] as const;
 const currencyLabelMap: Record<string, string> = {
   USD: "Доллар США",
   EUR: "Евро",
@@ -58,28 +58,25 @@ export function SidebarFxTradeCard({
   const snapshot = buildPortfolioSnapshot(portfolio, [], currencyRates);
   const availableCodes = React.useMemo(
     () =>
-      currencyRates.length
-        ? currencyRates
-            .map((rate) => rate.label.split("/")[0] ?? rate.code)
-            .filter(Boolean)
-        : [...FX_CODES],
+      currencyRates
+        .map((rate) => rate.label.split("/")[0] ?? rate.code)
+        .filter(Boolean),
     [currencyRates]
   );
   const [side, setSide] = React.useState<"buy" | "sell">("buy");
   const [selectedCode, setSelectedCode] = React.useState(
-    availableCodes[0] ?? "USD"
+    availableCodes[0] ?? ""
   );
   const [amount, setAmount] = React.useState("10000");
-  const [fee, setFee] = React.useState("0");
+  const hasRates = availableCodes.length > 0;
 
   React.useEffect(() => {
     if (!availableCodes.includes(selectedCode)) {
-      setSelectedCode(availableCodes[0] ?? "USD");
+      setSelectedCode(availableCodes[0] ?? "");
     }
   }, [availableCodes, selectedCode]);
 
   const parsedAmount = parseDecimalInput(amount);
-  const parsedFee = parseDecimalInput(fee);
   const selectedRate = currencyRates.find(
     (rate) => (rate.label.split("/")[0] ?? rate.code) === selectedCode
   );
@@ -98,33 +95,32 @@ export function SidebarFxTradeCard({
         ? parsedAmount
         : parsedAmount * selectedRate.price
       : 0;
+  const parsedFee = calculateFxTradeFee(rubValue);
   const buyTotalCost = rubValue + parsedFee;
-  const sellNetAmount = Math.max(0, rubValue - parsedFee);
+  const rawSellNetAmount = rubValue - parsedFee;
+  const sellNetAmount = Math.max(0, rawSellNetAmount);
   const canTrade =
     Boolean(selectedRate) &&
     parsedAmount > 0 &&
     (side === "buy"
       ? buyTotalCost <= snapshot.cashBalance
-      : fxQuantity <= (currentBalance?.quantity ?? 0) && sellNetAmount >= 0);
+      : fxQuantity <= (currentBalance?.quantity ?? 0) && rawSellNetAmount >= 0);
   const disabledReason = !selectedRate
-    ? "Нет актуального курса для выбранной валюты."
+    ? "Курсы валют временно недоступны. Попробуйте позже."
     : parsedAmount <= 0
       ? side === "buy"
         ? "Введите сумму покупки в RUB."
         : `Введите количество ${selectedCode} для продажи.`
-      : parsedFee < 0
-        ? "Комиссия должна быть неотрицательной."
       : side === "buy" && buyTotalCost > snapshot.cashBalance
         ? "Недостаточно рублей на балансе."
-        : side === "sell" && sellNetAmount < 0
+        : side === "sell" && rawSellNetAmount < 0
           ? "Комиссия не может быть больше суммы сделки."
-        : side === "sell" && fxQuantity > (currentBalance?.quantity ?? 0)
-          ? `Недостаточно ${selectedCode} на балансе.`
-          : null;
+          : side === "sell" && fxQuantity > (currentBalance?.quantity ?? 0)
+            ? `Недостаточно ${selectedCode} на балансе.`
+            : null;
 
   React.useEffect(() => {
     setAmount(side === "buy" ? "10000" : "100");
-    setFee("0");
   }, [side, selectedCode]);
 
   async function handleSubmit() {
@@ -136,12 +132,10 @@ export function SidebarFxTradeCard({
       await tradeCurrency({
         amount: parsedAmount,
         code: selectedCode,
-        fee: parsedFee,
         side,
         rate: selectedRate.price,
       });
       setAmount(side === "buy" ? "10000" : "100");
-      setFee("0");
       toast.success(
         side === "buy"
           ? `${selectedCode} куплена в портфель.`
@@ -178,15 +172,18 @@ export function SidebarFxTradeCard({
               <Select
                 value={selectedCode}
                 onValueChange={(value) =>
-                  setSelectedCode(value ?? availableCodes[0] ?? "USD")
+                  setSelectedCode(value ?? availableCodes[0] ?? "")
                 }
+                disabled={!hasRates}
               >
                 <SelectTrigger id="sidebar-fx-currency" className="w-full">
-                  <SelectValue placeholder="Выберите валюту">
-                    <div className="flex items-center gap-2">
-                      <CurrencyFlag code={selectedCode} className="size-5" />
-                      <span>{selectedCode}</span>
-                    </div>
+                  <SelectValue placeholder="Курсы загружаются">
+                    {selectedCode ? (
+                      <div className="flex items-center gap-2">
+                        <CurrencyFlag code={selectedCode} className="size-5" />
+                        <span>{selectedCode}</span>
+                      </div>
+                    ) : null}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent align="end">
@@ -217,17 +214,7 @@ export function SidebarFxTradeCard({
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
                 placeholder={side === "buy" ? "10000" : "100"}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="sidebar-fx-fee">Комиссия, RUB</Label>
-              <Input
-                id="sidebar-fx-fee"
-                inputMode="decimal"
-                value={fee}
-                onChange={(event) => setFee(event.target.value)}
-                placeholder="0"
+                disabled={!hasRates}
               />
             </div>
           </div>
@@ -245,11 +232,7 @@ export function SidebarFxTradeCard({
               <span className="text-muted-foreground">
                 {side === "buy" ? "Сумма без комиссии" : "Сумма продажи"}
               </span>
-              <span>
-                {selectedRate
-                  ? rubFormatter.format(rubValue)
-                  : "—"}
-              </span>
+              <span>{selectedRate ? rubFormatter.format(rubValue) : "—"}</span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted-foreground">Комиссия</span>
@@ -283,9 +266,11 @@ export function SidebarFxTradeCard({
             title={disabledReason ?? undefined}
           >
             <RiExchangeDollarLine />
-            {side === "buy"
-              ? `Купить ${selectedCode}`
-              : `Продать ${selectedCode}`}
+            {selectedCode
+              ? side === "buy"
+                ? `Купить ${selectedCode}`
+                : `Продать ${selectedCode}`
+              : "Обмен недоступен"}
           </Button>
           {disabledReason ? (
             <div className="text-muted-foreground text-xs">

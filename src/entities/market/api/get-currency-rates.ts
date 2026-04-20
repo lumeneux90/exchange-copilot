@@ -7,147 +7,76 @@ export type CurrencyRate = {
   changePercent: number;
 };
 
-type MoexRow = Array<string | number | null>;
-
-type MoexBlock = {
-  columns?: string[];
-  data?: MoexRow[];
+type CbrDailyCurrency = {
+  CharCode?: string;
+  Nominal?: number;
+  Value?: number;
+  Previous?: number;
 };
 
-type MoexResponse = {
-  securities?: MoexBlock;
-  marketdata?: MoexBlock;
+type CbrDailyResponse = {
+  Valute?: Record<string, CbrDailyCurrency>;
 };
 
-const MOEX_CURRENCY_URL =
-  "https://iss.moex.com/iss/engines/currency/markets/selt/securities.json";
+const CBR_DAILY_JSON_URL = "https://www.cbr-xml-daily.ru/daily_json.js";
+const TARGET_CURRENCIES = ["USD", "EUR", "CNY", "GBP", "HKD", "AED"] as const;
 
-const CURRENCY_PAIRS = [
-  {
-    code: "USD000UTSTOM",
-    label: "USD/RUB",
-  },
-  {
-    code: "EUR_RUB__TOM",
-    label: "EUR/RUB",
-  },
-  {
-    code: "CNYRUB_TOM",
-    label: "CNY/RUB",
-  },
-  {
-    code: "GBPRUB_TOM",
-    label: "GBP/RUB",
-  },
-  {
-    code: "HKDRUB_TOM",
-    label: "HKD/RUB",
-  },
-  {
-    code: "AEDRUB_TOM",
-    label: "AED/RUB",
-  },
-] as const;
+function getRubPrice(currency: CbrDailyCurrency | undefined) {
+  const nominal = currency?.Nominal ?? 0;
+  const value = currency?.Value ?? 0;
 
-function getColumnValue(row: MoexRow, columns: string[], columnName: string) {
-  const index = columns.indexOf(columnName);
-
-  return index === -1 ? null : row[index];
-}
-
-function toFiniteNumber(value: string | number | null) {
-  const parsed = Number(value ?? 0);
-
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function getFirstFiniteNumber(
-  row: MoexRow,
-  columns: string[],
-  columnNames: string[]
-) {
-  for (const columnName of columnNames) {
-    const value = toFiniteNumber(getColumnValue(row, columns, columnName));
-
-    if (value > 0) {
-      return value;
-    }
+  if (!Number.isFinite(nominal) || nominal <= 0) {
+    return 0;
   }
 
-  return 0;
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+
+  return value / nominal;
+}
+
+function getPreviousRubPrice(currency: CbrDailyCurrency | undefined) {
+  const nominal = currency?.Nominal ?? 0;
+  const previous = currency?.Previous ?? 0;
+
+  if (!Number.isFinite(nominal) || nominal <= 0) {
+    return 0;
+  }
+
+  if (!Number.isFinite(previous) || previous <= 0) {
+    return 0;
+  }
+
+  return previous / nominal;
 }
 
 export async function getCurrencyRates(): Promise<CurrencyRate[]> {
   try {
-    const securitiesParam = CURRENCY_PAIRS.map((pair) => pair.code).join(",");
-    const response = await fetch(
-      `${MOEX_CURRENCY_URL}?iss.meta=off&securities=${securitiesParam}`,
-      {
-        next: { revalidate: 60 },
-      }
-    );
+    const response = await fetch(CBR_DAILY_JSON_URL, {
+      next: { revalidate: 3600 },
+    });
 
     if (!response.ok) {
       return [];
     }
 
-    const moexData = (await response.json()) as MoexResponse;
-    const securityColumns = moexData.securities?.columns ?? [];
-    const securityRows = moexData.securities?.data ?? [];
-    const marketDataColumns = moexData.marketdata?.columns ?? [];
-    const marketDataRows = moexData.marketdata?.data ?? [];
+    const data = (await response.json()) as CbrDailyResponse;
+    const currencies = data.Valute ?? {};
 
-    const securityByCode = new Map(
-      securityRows.map((row) => [
-        String(getColumnValue(row, securityColumns, "SECID") ?? ""),
-        row,
-      ])
-    );
-    const marketDataByCode = new Map(
-      marketDataRows.map((row) => [
-        String(getColumnValue(row, marketDataColumns, "SECID") ?? ""),
-        row,
-      ])
-    );
-
-    return CURRENCY_PAIRS.map((pair) => {
-      const security = securityByCode.get(pair.code) ?? [];
-      const marketData = marketDataByCode.get(pair.code) ?? [];
-      const openingPrice = getFirstFiniteNumber(
-        marketData,
-        marketDataColumns,
-        ["OPEN", "LCLOSEPRICE", "LCLOSE"]
-      );
-      const fallbackOpeningPrice =
-        openingPrice ||
-        getFirstFiniteNumber(security, securityColumns, ["PREVPRICE"]);
-      const price = getFirstFiniteNumber(marketData, marketDataColumns, [
-        "LAST",
-        "MARKETPRICE",
-        "LCURRENTPRICE",
-        "LCLOSEPRICE",
-        "LCLOSE",
-        "LEGALCLOSEPRICE",
-        "PREVWAPRICE",
-      ]);
-      const fallbackPrice =
-        price ||
-        getFirstFiniteNumber(security, securityColumns, [
-          "PREVPRICE",
-          "PREVWAPRICE",
-        ]);
-      const safeOpeningPrice =
-        fallbackOpeningPrice > 0 ? fallbackOpeningPrice : fallbackPrice;
-      const safePrice = fallbackPrice > 0 ? fallbackPrice : safeOpeningPrice;
-      const change = safePrice - safeOpeningPrice;
+    return TARGET_CURRENCIES.map((currencyCode) => {
+      const currency = currencies[currencyCode];
+      const price = getRubPrice(currency);
+      const openingPrice = getPreviousRubPrice(currency) || price;
+      const change = price - openingPrice;
       const changePercent =
-        safeOpeningPrice > 0 ? (change / safeOpeningPrice) * 100 : 0;
+        openingPrice > 0 ? (change / openingPrice) * 100 : 0;
 
       return {
-        code: pair.code,
-        label: pair.label,
-        price: safePrice,
-        openingPrice: safeOpeningPrice,
+        code: currencyCode,
+        label: `${currencyCode}/RUB`,
+        price,
+        openingPrice,
         change,
         changePercent: Number.isFinite(changePercent) ? changePercent : 0,
       };
