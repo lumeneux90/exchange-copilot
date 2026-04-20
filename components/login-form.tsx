@@ -141,21 +141,22 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           window.localStorage.getItem(PASSCODE_STORAGE_KEY)
         );
 
-        window.sessionStorage.setItem(
-          PASSCODE_SKIP_ONCE_SESSION_KEY,
-          payload.login
-        );
-        window.sessionStorage.setItem(
-          PASSCODE_UNLOCKED_SESSION_KEY,
-          payload.login
-        );
-
         if (!hasStoredPasscode) {
+          window.sessionStorage.setItem(
+            PASSCODE_SKIP_ONCE_SESSION_KEY,
+            payload.login
+          );
+          window.sessionStorage.setItem(
+            PASSCODE_UNLOCKED_SESSION_KEY,
+            payload.login
+          );
           window.sessionStorage.setItem(
             PASSCODE_SETUP_PENDING_SESSION_KEY,
             payload.login
           );
         } else {
+          window.sessionStorage.removeItem(PASSCODE_SKIP_ONCE_SESSION_KEY);
+          window.sessionStorage.removeItem(PASSCODE_UNLOCKED_SESSION_KEY);
           window.sessionStorage.removeItem(PASSCODE_SETUP_PENDING_SESSION_KEY);
         }
       }
