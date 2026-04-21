@@ -763,7 +763,6 @@ export function ChartAreaInteractive({
                   x={chartExtremums.highest.point.label}
                   y={chartExtremums.highest.point.close}
                   r={3}
-                  isFront
                   ifOverflow="extendDomain"
                   fill="var(--color-close)"
                   stroke="var(--background)"
@@ -784,7 +783,6 @@ export function ChartAreaInteractive({
                   x={chartExtremums.lowest.point.label}
                   y={chartExtremums.lowest.point.close}
                   r={3}
-                  isFront
                   ifOverflow="extendDomain"
                   fill="var(--color-close)"
                   stroke="var(--background)"
