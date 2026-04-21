@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 
 import { NavMain } from "@/components/nav-main";
-import { SidebarFxTradeCard } from "@/components/portfolio/sidebar-fx-trade-card";
 import { SidebarWatchlistCard } from "@/components/portfolio/sidebar-watchlist-card";
 import { NavUser } from "@/components/nav-user";
 import { SidebarPortfolioCard } from "@/components/portfolio/sidebar-portfolio-card";
@@ -19,6 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   RiCommandLine,
+  RiLineChartLine,
   RiFundsLine,
   RiTimeLine,
   RiWallet3Line,
@@ -39,6 +39,12 @@ const data = {
       url: "/history",
       matchUrl: "/history",
       icon: <RiTimeLine />,
+    },
+    {
+      title: "Терминал",
+      url: "/chart",
+      matchUrl: "/chart",
+      icon: <RiLineChartLine />,
     },
     {
       title: "Портфель",
@@ -81,7 +87,6 @@ export function AppSidebar({
         <NavMain items={data.navMain} />
         <SidebarPortfolioCard currencyRates={currencyRates} stocks={stocks} />
         <SidebarWatchlistCard stocks={stocks} />
-        <SidebarFxTradeCard currencyRates={currencyRates} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />
