@@ -10,18 +10,20 @@ import {
 } from "@remixicon/react";
 
 import { CompanyLogo } from "@/components/company-logo";
+import { FxTradePanel } from "@/components/portfolio/fx-trade-panel";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
 import { cn } from "@/src/lib/utils";
 
 type MarketSummary = {
+  currencyRates: CurrencyRate[];
   moexIndexChangePercent: number;
   moexIndexLabel: string;
   moexIndexValue: number;
@@ -177,7 +179,7 @@ function MarketTopList({
                 ? "grid-cols-[minmax(0,1fr)_96px] sm:grid-cols-[minmax(0,1fr)_120px_112px]"
                 : "grid-cols-[minmax(0,1fr)_112px]",
               isInteractive
-                ? "cursor-pointer hover:bg-muted/40"
+                ? "hover:bg-muted/40 cursor-pointer"
                 : "cursor-default"
             )}
           >
@@ -185,10 +187,10 @@ function MarketTopList({
               <CompanyLogo
                 ticker={item.ticker}
                 name={item.name}
-                className="size-11 rounded-full border-0"
+                className="size-9 rounded-full border-0"
               />
               <div className="min-w-0 flex-1">
-                <div className="text-sm leading-tight font-medium md:text-[15px] sm:truncate">
+                <div className="text-sm leading-tight font-medium sm:truncate">
                   {item.name}
                 </div>
                 <div className="text-muted-foreground text-sm tracking-[0.08em] uppercase sm:truncate">
@@ -265,32 +267,44 @@ export function SectionCards({ summary }: { summary: MarketSummary }) {
     leadersView === "gainers" ? summary.topGainers : summary.topLosers;
 
   function handleSelectStock(stock: Stock) {
-    router.push(`/?ticker=${stock.ticker}#market-chart`);
+    router.push(`/chart?ticker=${stock.ticker}`);
   }
 
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2">
       <Card className="@container/card @xl/main:col-span-2">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold tabular-nums @[250px]/card:text-2xl">
+          <CardTitle className="text-lg font-semibold tabular-nums @[250px]/card:text-xl">
             Индекс Мосбиржи
           </CardTitle>
-          <CardDescription>IMOEX</CardDescription>
+          <CardDescription>{summary.moexIndexLabel}</CardDescription>
         </CardHeader>
-        <CardFooter className="mt-auto flex-col items-start gap-1.5 text-sm">
-          <div className="text-base font-medium tabular-nums">
+        <CardContent className="space-y-3">
+          <div className="text-2xl font-semibold tabular-nums">
             {formatIndexValue(summary.moexIndexValue)} пт.
           </div>
           <TrendValueBadge
             direction={moexIndexDirection}
             value={summary.moexIndexChangePercent}
           />
-        </CardFooter>
+        </CardContent>
+      </Card>
+
+      <Card className="@container/card @xl/main:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold @[250px]/card:text-xl">
+            Валютные пары
+          </CardTitle>
+          <CardDescription>Курсы и быстрый обмен</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FxTradePanel currencyRates={summary.currencyRates} />
+        </CardContent>
       </Card>
 
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold @[250px]/card:text-2xl">
+          <CardTitle className="text-lg font-semibold @[250px]/card:text-xl">
             Лидеры по обороту
           </CardTitle>
         </CardHeader>
@@ -306,7 +320,7 @@ export function SectionCards({ summary }: { summary: MarketSummary }) {
 
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold @[250px]/card:text-2xl">
+          <CardTitle className="text-lg font-semibold @[250px]/card:text-xl">
             Взлёты и падения дня
           </CardTitle>
         </CardHeader>

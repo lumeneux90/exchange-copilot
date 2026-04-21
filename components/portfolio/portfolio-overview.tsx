@@ -217,13 +217,11 @@ export function PortfolioOverview({
                   role="button"
                   tabIndex={0}
                   aria-label={`Открыть график ${holding.ticker}`}
-                  onClick={() =>
-                    router.push(`/?ticker=${holding.ticker}#market-chart`)
-                  }
+                  onClick={() => router.push(`/chart?ticker=${holding.ticker}`)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      router.push(`/?ticker=${holding.ticker}#market-chart`);
+                      router.push(`/chart?ticker=${holding.ticker}`);
                     }
                   }}
                 >

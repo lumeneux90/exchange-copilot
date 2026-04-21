@@ -41,7 +41,7 @@ export function SidebarWatchlistCard({ stocks }: { stocks: Stock[] }) {
             {watchlistStocks.map((stock) => (
               <Link
                 key={stock.ticker}
-                href={`/?ticker=${stock.ticker}`}
+                href={`/chart?ticker=${stock.ticker}`}
                 className="bg-sidebar-accent/30 hover:bg-sidebar-accent flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors"
               >
                 <div className="flex min-w-0 items-center gap-3">

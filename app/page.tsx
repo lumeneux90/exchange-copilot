@@ -1,4 +1,3 @@
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { SectionCards } from "@/components/section-cards";
@@ -8,6 +7,7 @@ import { getStocks } from "@/src/entities/stock/api/get-stocks";
 
 function getMarketSummary(
   stocks: Awaited<ReturnType<typeof getStocks>>,
+  currencyRates: Awaited<ReturnType<typeof getCurrencyRates>>,
   moexIndex: Awaited<ReturnType<typeof getMoexIndex>>
 ) {
   const mostActiveStocks = [...stocks]
@@ -23,6 +23,7 @@ function getMarketSummary(
     .slice(0, 5);
 
   return {
+    currencyRates,
     moexIndexChangePercent: moexIndex?.changePercent ?? 0,
     moexIndexLabel: moexIndex?.shortName ?? "Индекс Мосбиржи",
     moexIndexValue: moexIndex?.currentValue ?? 0,
@@ -38,7 +39,7 @@ export default async function HomePage() {
     getCurrencyRates(),
     getMoexIndex(),
   ]);
-  const summary = getMarketSummary(stocks, moexIndex);
+  const summary = getMarketSummary(stocks, currencyRates, moexIndex);
 
   return (
     <DashboardShell
@@ -48,9 +49,6 @@ export default async function HomePage() {
     >
       <section id="market-overview">
         <SectionCards summary={summary} />
-      </section>
-      <section id="market-chart" className="px-4 lg:px-6">
-        <ChartAreaInteractive stocks={stocks} />
       </section>
       <section id="stocks-table">
         <DataTable data={stocks} />

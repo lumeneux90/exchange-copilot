@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getCurrencyCandles } from "@/src/entities/market/api/get-currency-candles";
 import {
   getStockCandles,
   type CandleRange,
@@ -18,8 +19,12 @@ function getRangeParam(value: string | null): CandleRange {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const ticker = searchParams.get("ticker") ?? "";
+  const fx = searchParams.get("fx") ?? "";
   const range = getRangeParam(searchParams.get("range"));
-  const candles = await getStockCandles(ticker, range);
+
+  const candles = fx
+    ? await getCurrencyCandles(fx, range)
+    : await getStockCandles(ticker, range);
 
   return NextResponse.json(candles);
 }

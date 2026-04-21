@@ -90,7 +90,7 @@ export function DataTable({ data }: { data: Stock[] }) {
   }, [data, sortBy]);
 
   function openChart(stock: Stock) {
-    router.push(`/?ticker=${stock.ticker}#market-chart`);
+    router.push(`/chart?ticker=${stock.ticker}`);
   }
 
   return (

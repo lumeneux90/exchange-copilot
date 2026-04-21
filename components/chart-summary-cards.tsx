@@ -16,8 +16,12 @@ type ChartSummaryCardsProps = {
   range: CandleRange;
   latestPrice: number | null;
   periodOpenPrice: number | null;
+  latestPriceLabel?: string;
+  periodOpenLabel?: string;
   rangeChange: number;
   totalVolume: number | null;
+  detailLabel?: string;
+  detailValue?: React.ReactNode;
 };
 
 function Metric({
@@ -43,17 +47,21 @@ export function ChartSummaryCards({
   range,
   latestPrice,
   periodOpenPrice,
+  latestPriceLabel = "Последняя цена",
+  periodOpenLabel = "Открытие",
   rangeChange,
   totalVolume,
+  detailLabel = "Объем",
+  detailValue,
 }: ChartSummaryCardsProps) {
   return (
     <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
       <Metric
-        label="Последняя цена"
+        label={latestPriceLabel}
         value={latestPrice !== null ? formatPrice(latestPrice) : "Нет данных"}
       />
       <Metric
-        label="Открытие"
+        label={periodOpenLabel}
         value={
           periodOpenPrice !== null ? formatPrice(periodOpenPrice) : "Нет данных"
         }
@@ -73,8 +81,11 @@ export function ChartSummaryCards({
         className={getRangeChangeClass(rangeChange)}
       />
       <Metric
-        label="Объем"
-        value={totalVolume !== null ? formatVolume(totalVolume) : "Нет данных"}
+        label={detailLabel}
+        value={
+          detailValue ??
+          (totalVolume !== null ? formatVolume(totalVolume) : "Нет данных")
+        }
       />
       <Metric label="Период" value={rangeLabels[range]} />
     </div>
