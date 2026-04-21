@@ -19,11 +19,12 @@ export type StockCandle = {
   end: string;
 };
 
-export type CandleRange = "day" | "week" | "month" | "year";
+export type CandleRange = "day" | "week" | "month" | "year" | "all";
 
 const MOEX_CANDLES_URL =
   "https://iss.moex.com/iss/engines/stock/markets/shares/securities";
 const MOEX_TIMEZONE = "Europe/Moscow";
+const MOEX_PAGE_SIZE = 100;
 
 function getColumnValue(
   row: MoexCandleRow,
@@ -67,6 +68,9 @@ function getDateRange(range: CandleRange) {
     case "year":
       startDate.setFullYear(startDate.getFullYear() - 1);
       break;
+    case "all":
+      startDate.setFullYear(2000, 0, 1);
+      break;
   }
 
   return {
@@ -77,6 +81,41 @@ function getDateRange(range: CandleRange) {
 
 function getInterval(range: CandleRange) {
   return range === "day" ? 10 : 24;
+}
+
+function mapCandlesResponse(moexData: MoexCandlesResponse): StockCandle[] {
+  const candleColumns = moexData.candles?.columns ?? [];
+  const candleRows = moexData.candles?.data ?? [];
+
+  return candleRows
+    .map((row) => {
+      const open = Number(getColumnValue(row, candleColumns, "open") ?? 0);
+      const close = Number(getColumnValue(row, candleColumns, "close") ?? 0);
+      const high = Number(getColumnValue(row, candleColumns, "high") ?? 0);
+      const low = Number(getColumnValue(row, candleColumns, "low") ?? 0);
+      const volume = Number(getColumnValue(row, candleColumns, "volume") ?? 0);
+      const begin = String(getColumnValue(row, candleColumns, "begin") ?? "");
+      const end = String(getColumnValue(row, candleColumns, "end") ?? "");
+
+      return {
+        open: Number.isFinite(open) ? open : 0,
+        close: Number.isFinite(close) ? close : 0,
+        high: Number.isFinite(high) ? high : 0,
+        low: Number.isFinite(low) ? low : 0,
+        volume: Number.isFinite(volume) ? volume : 0,
+        begin,
+        end,
+      };
+    })
+    .filter(
+      (candle) =>
+        candle.begin &&
+        candle.end &&
+        candle.open > 0 &&
+        candle.close > 0 &&
+        candle.high > 0 &&
+        candle.low > 0
+    );
 }
 
 export async function getStockCandles(
@@ -92,52 +131,31 @@ export async function getStockCandles(
 
     const { from, till } = getDateRange(range);
     const interval = getInterval(range);
-    const response = await fetch(
-      `${MOEX_CANDLES_URL}/${normalizedTicker}/candles.json?iss.meta=off&from=${from}&till=${till}&interval=${interval}`,
-      {
-        next: { revalidate: 60 },
-      }
-    );
+    const candles: StockCandle[] = [];
 
-    if (!response.ok) {
-      return [];
+    for (let start = 0; ; start += MOEX_PAGE_SIZE) {
+      const response = await fetch(
+        `${MOEX_CANDLES_URL}/${normalizedTicker}/candles.json?iss.meta=off&from=${from}&till=${till}&interval=${interval}&start=${start}`,
+        {
+          next: { revalidate: 60 },
+        }
+      );
+
+      if (!response.ok) {
+        return start === 0 ? [] : candles;
+      }
+
+      const moexData = (await response.json()) as MoexCandlesResponse;
+      const nextCandles = mapCandlesResponse(moexData);
+
+      candles.push(...nextCandles);
+
+      if (nextCandles.length < MOEX_PAGE_SIZE) {
+        break;
+      }
     }
 
-    const moexData = (await response.json()) as MoexCandlesResponse;
-    const candleColumns = moexData.candles?.columns ?? [];
-    const candleRows = moexData.candles?.data ?? [];
-
-    return candleRows
-      .map((row) => {
-        const open = Number(getColumnValue(row, candleColumns, "open") ?? 0);
-        const close = Number(getColumnValue(row, candleColumns, "close") ?? 0);
-        const high = Number(getColumnValue(row, candleColumns, "high") ?? 0);
-        const low = Number(getColumnValue(row, candleColumns, "low") ?? 0);
-        const volume = Number(
-          getColumnValue(row, candleColumns, "volume") ?? 0
-        );
-        const begin = String(getColumnValue(row, candleColumns, "begin") ?? "");
-        const end = String(getColumnValue(row, candleColumns, "end") ?? "");
-
-        return {
-          open: Number.isFinite(open) ? open : 0,
-          close: Number.isFinite(close) ? close : 0,
-          high: Number.isFinite(high) ? high : 0,
-          low: Number.isFinite(low) ? low : 0,
-          volume: Number.isFinite(volume) ? volume : 0,
-          begin,
-          end,
-        };
-      })
-      .filter(
-        (candle) =>
-          candle.begin &&
-          candle.end &&
-          candle.open > 0 &&
-          candle.close > 0 &&
-          candle.high > 0 &&
-          candle.low > 0
-      );
+    return candles;
   } catch {
     return [];
   }

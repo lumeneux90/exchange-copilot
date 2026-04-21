@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { RiStarFill, RiStarLine } from "@remixicon/react";
 
 import { CompanyLogo } from "@/components/company-logo";
-import { TradeOrderSheet } from "@/components/trade-order-sheet";
 import type { Stock } from "@/src/entities/stock/model/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -21,6 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useWatchlist } from "@/src/features/watchlist/model/watchlist-context";
+import { cn } from "@/src/lib/utils";
 
 function formatPrice(value: number) {
   return `${value.toFixed(2)} RUB`;
@@ -60,9 +64,9 @@ const sortOptionLabels: Record<SortOption, string> = {
 };
 
 export function DataTable({ data }: { data: Stock[] }) {
+  const router = useRouter();
+  const { isInWatchlist, toggleTicker } = useWatchlist();
   const [sortBy, setSortBy] = React.useState<SortOption>("default");
-  const [tradeStock, setTradeStock] = React.useState<Stock | null>(null);
-  const [isTradeSheetOpen, setIsTradeSheetOpen] = React.useState(false);
 
   const sortedData = React.useMemo(() => {
     const nextData = [...data];
@@ -85,9 +89,8 @@ export function DataTable({ data }: { data: Stock[] }) {
     }
   }, [data, sortBy]);
 
-  function openTradeSheet(stock: Stock) {
-    setTradeStock(stock);
-    setIsTradeSheetOpen(true);
+  function openChart(stock: Stock) {
+    router.push(`/?ticker=${stock.ticker}#market-chart`);
   }
 
   return (
@@ -132,6 +135,7 @@ export function DataTable({ data }: { data: Stock[] }) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12" />
               <TableHead>Тикер</TableHead>
               <TableHead>Компания</TableHead>
               <TableHead className="text-right">Последняя</TableHead>
@@ -145,15 +149,44 @@ export function DataTable({ data }: { data: Stock[] }) {
                 key={stock.ticker}
                 className="cursor-pointer"
                 tabIndex={0}
-                aria-label={`Открыть сделку по ${stock.ticker}`}
-                onClick={() => openTradeSheet(stock)}
+                aria-label={`Открыть график ${stock.ticker}`}
+                onClick={() => openChart(stock)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    openTradeSheet(stock);
+                    openChart(stock);
                   }
                 }}
               >
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "text-muted-foreground hover:text-foreground size-8 rounded-full",
+                      isInWatchlist(stock.ticker) &&
+                        "text-amber-500 hover:text-amber-500"
+                    )}
+                    aria-label={
+                      isInWatchlist(stock.ticker)
+                        ? `Убрать ${stock.ticker} из избранного`
+                        : `Добавить ${stock.ticker} в избранное`
+                    }
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleTicker(stock.ticker);
+                    }}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    {isInWatchlist(stock.ticker) ? (
+                      <RiStarFill className="size-4" />
+                    ) : (
+                      <RiStarLine className="size-4" />
+                    )}
+                  </Button>
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <CompanyLogo
@@ -183,12 +216,6 @@ export function DataTable({ data }: { data: Stock[] }) {
           </TableBody>
         </Table>
       </div>
-      <TradeOrderSheet
-        stock={tradeStock}
-        open={isTradeSheetOpen}
-        onOpenChange={setIsTradeSheetOpen}
-        showTrigger={false}
-      />
     </div>
   );
 }

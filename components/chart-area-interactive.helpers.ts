@@ -1,6 +1,6 @@
 import type { ChartConfig } from "@/components/ui/chart";
 
-export type CandleRange = "day" | "week" | "month" | "year";
+export type CandleRange = "day" | "week" | "month" | "year" | "all";
 
 export type CandleResponseItem = {
   open: number;
@@ -21,6 +21,7 @@ export const rangeLabels: Record<CandleRange, string> = {
   week: "Неделя",
   month: "Месяц",
   year: "Год",
+  all: "Все",
 };
 
 export const chartConfig = {
@@ -30,11 +31,26 @@ export const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function buildChartData(candles: CandleResponseItem[]): ChartPoint[] {
-  return candles.map((candle) => ({
-    ...candle,
-    label: candle.begin,
-  }));
+export function getXAxisTicks(data: ChartPoint[], range: CandleRange) {
+  if (range !== "all") {
+    return undefined;
+  }
+
+  const ticks: string[] = [];
+  const seenYears = new Set<number>();
+
+  for (const point of data) {
+    const date = parseDateParts(point.label);
+
+    if (!date || seenYears.has(date.year)) {
+      continue;
+    }
+
+    seenYears.add(date.year);
+    ticks.push(point.label);
+  }
+
+  return ticks;
 }
 
 export function formatPrice(value: number) {
@@ -134,6 +150,90 @@ function parseDateParts(value: string): ParsedDateParts | null {
   };
 }
 
+function getIsoWeek(parts: ParsedDateParts) {
+  const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  const day = date.getUTCDay() || 7;
+
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(
+    ((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  );
+
+  return {
+    year: date.getUTCFullYear(),
+    week,
+  };
+}
+
+function groupCandleKey(candle: CandleResponseItem, range: CandleRange) {
+  const date = parseDateParts(candle.begin);
+
+  if (!date) {
+    return candle.begin;
+  }
+
+  if (range === "all") {
+    return `${date.year}-${String(date.month).padStart(2, "0")}`;
+  }
+
+  if (range === "year") {
+    const isoWeek = getIsoWeek(date);
+
+    return `${isoWeek.year}-W${String(isoWeek.week).padStart(2, "0")}`;
+  }
+
+  return candle.begin;
+}
+
+function aggregateCandles(
+  candles: CandleResponseItem[],
+  range: CandleRange
+): CandleResponseItem[] {
+  if (range !== "year" && range !== "all") {
+    return candles;
+  }
+
+  const groups = new Map<string, CandleResponseItem[]>();
+
+  for (const candle of candles) {
+    const key = groupCandleKey(candle, range);
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.push(candle);
+    } else {
+      groups.set(key, [candle]);
+    }
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    const first = group[0];
+    const last = group[group.length - 1];
+
+    return {
+      open: first.open,
+      close: last.close,
+      high: Math.max(...group.map((item) => item.high)),
+      low: Math.min(...group.map((item) => item.low)),
+      volume: group.reduce((sum, item) => sum + item.volume, 0),
+      begin: first.begin,
+      end: last.end,
+    };
+  });
+}
+
+export function buildChartData(
+  candles: CandleResponseItem[],
+  range: CandleRange
+): ChartPoint[] {
+  return aggregateCandles(candles, range).map((candle) => ({
+    ...candle,
+    label: candle.begin,
+  }));
+}
+
 export function formatAxisLabel(value: string, range: CandleRange) {
   const date = parseDateParts(value);
 
@@ -147,6 +247,10 @@ export function formatAxisLabel(value: string, range: CandleRange) {
 
   if (range === "year") {
     return RU_MONTHS_SHORT[date.month - 1] ?? value;
+  }
+
+  if (range === "all") {
+    return String(date.year);
   }
 
   return `${String(date.day).padStart(2, "0")}.${String(date.month).padStart(
@@ -170,6 +274,10 @@ export function formatTooltipLabel(value: string, range: CandleRange) {
   }
 
   if (range === "year") {
+    return `${date.day} ${month} ${date.year}`;
+  }
+
+  if (range === "all") {
     return `${date.day} ${month} ${date.year}`;
   }
 

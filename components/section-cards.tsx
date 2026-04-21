@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 
 import {
   RiArrowDownLine,
@@ -9,7 +10,6 @@ import {
 } from "@remixicon/react";
 
 import { CompanyLogo } from "@/components/company-logo";
-import { TradeOrderSheet } from "@/components/trade-order-sheet";
 import {
   Card,
   CardContent,
@@ -19,7 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { Stock } from "@/src/entities/stock/model/types";
-import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
 import { cn } from "@/src/lib/utils";
 
 type MarketSummary = {
@@ -257,24 +256,16 @@ function MarketTopList({
 }
 
 export function SectionCards({ summary }: { summary: MarketSummary }) {
+  const router = useRouter();
   const moexIndexDirection = getTrendDirection(summary.moexIndexChangePercent);
-  const marketStatus = getStockMarketStatus();
-  const isTradeAvailable = marketStatus.isOpen;
   const [leadersView, setLeadersView] = React.useState<"gainers" | "losers">(
     "gainers"
   );
-  const [tradeStock, setTradeStock] = React.useState<Stock | null>(null);
-  const [isTradeSheetOpen, setIsTradeSheetOpen] = React.useState(false);
   const leaderItems =
     leadersView === "gainers" ? summary.topGainers : summary.topLosers;
 
   function handleSelectStock(stock: Stock) {
-    if (!isTradeAvailable) {
-      return;
-    }
-
-    setTradeStock(stock);
-    setIsTradeSheetOpen(true);
+    router.push(`/?ticker=${stock.ticker}#market-chart`);
   }
 
   return (
@@ -307,7 +298,7 @@ export function SectionCards({ summary }: { summary: MarketSummary }) {
           <MarketTopList
             items={summary.mostActiveStocks}
             secondaryMetric="turnover"
-            isInteractive={isTradeAvailable}
+            isInteractive
             onSelect={handleSelectStock}
           />
         </CardContent>
@@ -349,17 +340,11 @@ export function SectionCards({ summary }: { summary: MarketSummary }) {
           <MarketTopList
             items={leaderItems}
             secondaryMetric="change"
-            isInteractive={isTradeAvailable}
+            isInteractive
             onSelect={handleSelectStock}
           />
         </CardContent>
       </Card>
-      <TradeOrderSheet
-        stock={tradeStock}
-        open={isTradeSheetOpen}
-        onOpenChange={setIsTradeSheetOpen}
-        showTrigger={false}
-      />
     </div>
   );
 }
