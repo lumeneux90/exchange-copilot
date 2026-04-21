@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { RiPieChartLine } from "@remixicon/react";
 
 import { CompanyLogo } from "@/components/company-logo";
@@ -30,6 +31,7 @@ import {
 import {
   formatSignedCurrency,
   formatSignedPercent,
+  rubFormatter,
   rubFormatterRounded,
 } from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
@@ -69,6 +71,7 @@ export function PortfolioOverview({
   currencyRates: CurrencyRate[];
   stocks: Stock[];
 }) {
+  const router = useRouter();
   const { portfolio } = usePortfolio();
   const snapshot = buildPortfolioSnapshot(portfolio, stocks, currencyRates);
   const stocksByTicker = React.useMemo(
@@ -148,7 +151,7 @@ export function PortfolioOverview({
                       Курс сейчас
                     </div>
                     <div className="text-sm font-medium">
-                      {rubFormatterRounded.format(currency.currentRate)}
+                      {rubFormatter.format(currency.currentRate)}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -210,7 +213,19 @@ export function PortfolioOverview({
               return (
                 <div
                   key={holding.ticker}
-                  className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))_auto]"
+                  className="hover:bg-muted/30 grid cursor-pointer gap-3 rounded-lg border p-4 text-left transition-colors md:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))_auto]"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Открыть график ${holding.ticker}`}
+                  onClick={() =>
+                    router.push(`/?ticker=${holding.ticker}#market-chart`)
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      router.push(`/?ticker=${holding.ticker}#market-chart`);
+                    }
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     <CompanyLogo
@@ -236,7 +251,7 @@ export function PortfolioOverview({
                       Цена сейчас
                     </div>
                     <div className="text-sm font-medium">
-                      {rubFormatterRounded.format(holding.currentPrice)}
+                      {rubFormatter.format(holding.currentPrice)}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -269,12 +284,17 @@ export function PortfolioOverview({
                     </div>
                   </div>
                   <div className="flex items-center md:justify-end">
-                    <TradeOrderSheet
-                      stock={stock ?? null}
-                      triggerLabel="Совершить сделку"
-                      triggerVariant="outline"
-                      triggerClassName="w-full md:w-auto"
-                    />
+                    <div
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      <TradeOrderSheet
+                        stock={stock ?? null}
+                        triggerLabel="Совершить сделку"
+                        triggerVariant="outline"
+                        triggerClassName="w-full md:w-auto"
+                      />
+                    </div>
                   </div>
                 </div>
               );

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 
 type WatchlistContextValue = {
   isInWatchlist: (ticker: string) => boolean;
@@ -10,7 +11,7 @@ type WatchlistContextValue = {
 };
 
 const STORAGE_KEY = "xchange-copilot-watchlist";
-const MAX_WATCHLIST_ITEMS = 5;
+const MAX_WATCHLIST_ITEMS = 10;
 
 const WatchlistContext = React.createContext<WatchlistContextValue | null>(null);
 
@@ -64,13 +65,18 @@ export function WatchlistProvider({
       return;
     }
 
-    setTickers((currentTickers) =>
-      currentTickers.includes(normalizedTicker)
-        ? currentTickers.filter((item) => item !== normalizedTicker)
-        : currentTickers.length >= MAX_WATCHLIST_ITEMS
-          ? currentTickers
-          : [...currentTickers, normalizedTicker]
-    );
+    setTickers((currentTickers) => {
+      if (currentTickers.includes(normalizedTicker)) {
+        return currentTickers.filter((item) => item !== normalizedTicker);
+      }
+
+      if (currentTickers.length >= MAX_WATCHLIST_ITEMS) {
+        toast.info("Watchlist уже заполнен");
+        return currentTickers;
+      }
+
+      return [...currentTickers, normalizedTicker];
+    });
   }, []);
 
   const isInWatchlist = React.useCallback(

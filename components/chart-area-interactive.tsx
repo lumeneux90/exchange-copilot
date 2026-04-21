@@ -23,6 +23,7 @@ import {
   getChartDomain,
   getRangeChange,
   getTotalVolume,
+  getXAxisTicks,
   rangeLabels,
 } from "@/components/chart-area-interactive.helpers";
 import { ChartSummaryCards } from "@/components/chart-summary-cards";
@@ -51,6 +52,12 @@ import {
   RiCheckLine,
 } from "@/components/ui/command";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import {
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -64,6 +71,7 @@ import {
 } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/src/lib/utils";
 import { useWatchlist } from "@/src/features/watchlist/model/watchlist-context";
 
@@ -73,6 +81,7 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
   const { isInWatchlist, tickers, toggleTicker } = useWatchlist();
   const requestedTicker = searchParams.get("ticker")?.trim().toUpperCase() ?? "";
   const [selectedTicker, setSelectedTicker] = React.useState(
@@ -193,7 +202,10 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
     [orderedStocks, tickers]
   );
 
-  const chartData = React.useMemo(() => buildChartData(candles), [candles]);
+  const chartData = React.useMemo(
+    () => buildChartData(candles, range),
+    [candles, range]
+  );
 
   const latestCandle = candles.at(-1);
   const firstCandle = candles[0];
@@ -203,9 +215,111 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
     () => getChartDomain(chartData),
     [chartData]
   );
+  const xAxisTicks = React.useMemo(
+    () => getXAxisTicks(chartData, range),
+    [chartData, range]
+  );
   const showLoadingState = requestState === "loading";
   const showErrorState = requestState === "error";
   const showEmptyState = requestState === "success" && !chartData.length;
+  const tickerSelectorTrigger = (
+    <Button
+      variant="outline"
+      className="h-8 w-full justify-between @[920px]/card:w-[26rem]"
+    >
+      <span className="truncate">
+        {selectedStock
+          ? `${selectedStock.ticker} · ${selectedStock.name}`
+          : "Выбрать компанию"}
+      </span>
+      <RiArrowUpDownLine data-icon="inline-end" />
+    </Button>
+  );
+  const tickerSelectorContent = (
+    <Command>
+      <CommandInput placeholder="Найти тикер или компанию" />
+      <CommandList>
+        <CommandEmpty>Ничего не найдено</CommandEmpty>
+        {watchlistStocks.length > 0 ? (
+          <CommandGroup heading="Watchlist">
+            {watchlistStocks.map((stock) => (
+              <CommandItem
+                key={stock.ticker}
+                value={`${stock.ticker} ${stock.name}`}
+                keywords={[stock.ticker, stock.name]}
+                onSelect={() => {
+                  React.startTransition(() => {
+                    setSelectedTicker(stock.ticker);
+                    updateTickerQuery(stock.ticker);
+                    setIsTickerOpen(false);
+                  });
+                }}
+              >
+                <RiCheckLine
+                  className={cn(
+                    selectedTicker === stock.ticker ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <CompanyLogo
+                      ticker={stock.ticker}
+                      name={stock.name}
+                      className="size-7 rounded-md"
+                    />
+                    <div className="min-w-0">
+                      <div className="font-medium">{stock.ticker}</div>
+                      <div className="text-muted-foreground truncate text-xs">
+                        {stock.name}
+                      </div>
+                    </div>
+                  </div>
+                  <RiStarFill className="text-amber-500" />
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ) : null}
+        <CommandGroup heading={watchlistStocks.length ? "Все тикеры" : "Тикеры"}>
+          {otherStocks.map((stock) => (
+            <CommandItem
+              key={stock.ticker}
+              value={`${stock.ticker} ${stock.name}`}
+              keywords={[stock.ticker, stock.name]}
+              onSelect={() => {
+                React.startTransition(() => {
+                  setSelectedTicker(stock.ticker);
+                  updateTickerQuery(stock.ticker);
+                  setIsTickerOpen(false);
+                });
+              }}
+            >
+              <RiCheckLine
+                className={cn(
+                  selectedTicker === stock.ticker ? "opacity-100" : "opacity-0"
+                )}
+              />
+              <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <CompanyLogo
+                    ticker={stock.ticker}
+                    name={stock.name}
+                    className="size-7 rounded-md"
+                  />
+                  <div className="min-w-0">
+                    <div className="font-medium">{stock.ticker}</div>
+                    <div className="text-muted-foreground truncate text-xs">
+                      {stock.name}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  );
 
   return (
     <Card className="@container/card">
@@ -253,116 +367,35 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
         <CardAction className="col-start-1 row-start-2 w-full self-center justify-self-stretch @[920px]/card:col-start-2 @[920px]/card:row-start-1 @[920px]/card:w-auto">
           <div className="flex flex-col gap-3 @[920px]/card:items-end">
             <div className="flex w-full flex-col gap-3 @[920px]/card:w-auto @[920px]/card:flex-row @[920px]/card:items-center @[920px]/card:justify-end">
-              <Popover open={isTickerOpen} onOpenChange={setIsTickerOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      className="h-8 w-full justify-between @[920px]/card:w-[26rem]"
-                    />
-                  }
-                >
-                  <span className="truncate">
-                    {selectedStock
-                      ? `${selectedStock.ticker} · ${selectedStock.name}`
-                      : "Выбрать компанию"}
-                  </span>
-                  <RiArrowUpDownLine data-icon="inline-end" />
-                </PopoverTrigger>
-                <PopoverContent className="w-[26rem] p-0" align="end">
-                  <Command>
-                    <CommandInput placeholder="Найти тикер или компанию" />
-                    <CommandList>
-                      <CommandEmpty>Ничего не найдено</CommandEmpty>
-                      {watchlistStocks.length > 0 ? (
-                        <CommandGroup heading="Watchlist">
-                          {watchlistStocks.map((stock) => (
-                            <CommandItem
-                              key={stock.ticker}
-                              value={`${stock.ticker} ${stock.name}`}
-                              keywords={[stock.ticker, stock.name]}
-                              onSelect={() => {
-                                React.startTransition(() => {
-                                  setSelectedTicker(stock.ticker);
-                                  updateTickerQuery(stock.ticker);
-                                  setIsTickerOpen(false);
-                                });
-                              }}
-                            >
-                              <RiCheckLine
-                                className={cn(
-                                  selectedTicker === stock.ticker
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                                <div className="flex min-w-0 items-center gap-3">
-                                  <CompanyLogo
-                                    ticker={stock.ticker}
-                                    name={stock.name}
-                                    className="size-7 rounded-md"
-                                  />
-                                  <div className="min-w-0">
-                                    <div className="font-medium">
-                                      {stock.ticker}
-                                    </div>
-                                    <div className="text-muted-foreground truncate text-xs">
-                                      {stock.name}
-                                    </div>
-                                  </div>
-                                </div>
-                                <RiStarFill className="text-amber-500" />
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      ) : null}
-                      <CommandGroup heading={watchlistStocks.length ? "Все тикеры" : "Тикеры"}>
-                        {otherStocks.map((stock) => (
-                          <CommandItem
-                            key={stock.ticker}
-                            value={`${stock.ticker} ${stock.name}`}
-                            keywords={[stock.ticker, stock.name]}
-                            onSelect={() => {
-                              React.startTransition(() => {
-                                setSelectedTicker(stock.ticker);
-                                updateTickerQuery(stock.ticker);
-                                setIsTickerOpen(false);
-                              });
-                            }}
-                          >
-                            <RiCheckLine
-                              className={cn(
-                                selectedTicker === stock.ticker
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                            <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                              <div className="flex min-w-0 items-center gap-3">
-                                <CompanyLogo
-                                  ticker={stock.ticker}
-                                  name={stock.name}
-                                  className="size-7 rounded-md"
-                                />
-                                <div className="min-w-0">
-                                  <div className="font-medium">
-                                    {stock.ticker}
-                                  </div>
-                                  <div className="text-muted-foreground truncate text-xs">
-                                    {stock.name}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              {isMobile ? (
+                <Drawer open={isTickerOpen} onOpenChange={setIsTickerOpen}>
+                  <Button
+                    variant="outline"
+                    className="h-8 w-full justify-between @[920px]/card:w-[26rem]"
+                    onClick={() => setIsTickerOpen(true)}
+                  >
+                    <span className="truncate">
+                      {selectedStock
+                        ? `${selectedStock.ticker} · ${selectedStock.name}`
+                        : "Выбрать компанию"}
+                    </span>
+                    <RiArrowUpDownLine data-icon="inline-end" />
+                  </Button>
+                  <DrawerContent className="p-0">
+                    <DrawerHeader className="px-4 pb-2 text-left">
+                      <DrawerTitle>Выбрать компанию</DrawerTitle>
+                    </DrawerHeader>
+                    <div className="px-2 pb-2">{tickerSelectorContent}</div>
+                  </DrawerContent>
+                </Drawer>
+              ) : (
+                <Popover open={isTickerOpen} onOpenChange={setIsTickerOpen}>
+                  <PopoverTrigger render={tickerSelectorTrigger} />
+                  <PopoverContent className="w-[26rem] p-0" align="end">
+                    {tickerSelectorContent}
+                  </PopoverContent>
+                </Popover>
+              )}
               <ToggleGroup
                 multiple={false}
                 value={[range]}
@@ -462,6 +495,7 @@ export function ChartAreaInteractive({ stocks }: { stocks: Stock[] }) {
               <CartesianGrid vertical={false} />
               <XAxis
                 dataKey="label"
+                ticks={xAxisTicks}
                 tickLine={false}
                 axisLine={false}
                 minTickGap={28}

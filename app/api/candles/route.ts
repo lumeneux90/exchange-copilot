@@ -5,7 +5,7 @@ import {
   type CandleRange,
 } from "@/src/entities/stock/api/get-stock-candles";
 
-const VALID_RANGES: CandleRange[] = ["day", "week", "month", "year"];
+const VALID_RANGES: CandleRange[] = ["day", "week", "month", "year", "all"];
 
 function getRangeParam(value: string | null): CandleRange {
   if (value && VALID_RANGES.includes(value as CandleRange)) {
