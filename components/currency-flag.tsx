@@ -17,17 +17,9 @@ const currencyFlagMap: Record<string, { alt: string; src: string }> = {
     alt: "Флаг Китая",
     src: "/flags/cn-round.svg",
   },
-  GBP: {
-    alt: "Флаг Великобритании",
-    src: "/flags/gb-round.svg",
-  },
   HKD: {
     alt: "Флаг Гонконга",
     src: "/flags/hk-round.svg",
-  },
-  AED: {
-    alt: "Флаг ОАЭ",
-    src: "/flags/ae-round.svg",
   },
 };
 

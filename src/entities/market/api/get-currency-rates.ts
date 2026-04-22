@@ -1,3 +1,5 @@
+import { ACTIVE_FX_CURRENCY_CODES } from "@/src/entities/market/model/currencies";
+
 export type CurrencyRate = {
   code: string;
   label: string;
@@ -19,7 +21,6 @@ type CbrDailyResponse = {
 };
 
 const CBR_DAILY_JSON_URL = "https://www.cbr-xml-daily.ru/daily_json.js";
-const TARGET_CURRENCIES = ["USD", "EUR", "CNY", "GBP", "HKD", "AED"] as const;
 
 function getRubPrice(currency: CbrDailyCurrency | undefined) {
   const nominal = currency?.Nominal ?? 0;
@@ -64,7 +65,7 @@ export async function getCurrencyRates(): Promise<CurrencyRate[]> {
     const data = (await response.json()) as CbrDailyResponse;
     const currencies = data.Valute ?? {};
 
-    return TARGET_CURRENCIES.map((currencyCode) => {
+    return ACTIVE_FX_CURRENCY_CODES.map((currencyCode) => {
       const currency = currencies[currencyCode];
       const price = getRubPrice(currency);
       const openingPrice = getPreviousRubPrice(currency) || price;

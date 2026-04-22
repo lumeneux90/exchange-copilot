@@ -28,6 +28,7 @@ import {
   buildPortfolioSnapshot,
   usePortfolio,
 } from "@/src/features/portfolio/model/portfolio-context";
+import { getCurrencyLabel } from "@/src/entities/market/model/currencies";
 import {
   formatSignedCurrency,
   formatSignedPercent,
@@ -36,15 +37,6 @@ import {
 } from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
 import React from "react";
-
-const currencyDisplayMap: Record<string, { label: string }> = {
-  USD: { label: "Доллар США" },
-  EUR: { label: "Евро" },
-  CNY: { label: "Китайский юань" },
-  GBP: { label: "Фунт стерлингов" },
-  HKD: { label: "Гонконгский доллар" },
-  AED: { label: "Дирхам ОАЭ" },
-};
 
 function formatCurrencyUnits(value: number, code: string) {
   return `${new Intl.NumberFormat("ru-RU", {
@@ -126,10 +118,6 @@ export function PortfolioOverview({
               const profitLossPercentTone = getTrendTone(
                 currency.profitLossPercent
               );
-              const currencyDisplay = currencyDisplayMap[currency.code] ?? {
-                label: currency.code,
-              };
-
               return (
                 <div
                   key={currency.code}
@@ -142,7 +130,7 @@ export function PortfolioOverview({
                         {formatCurrencyUnits(currency.quantity, currency.code)}
                       </div>
                       <div className="text-muted-foreground truncate text-xs">
-                        {currencyDisplay.label}
+                        {getCurrencyLabel(currency.code)}
                       </div>
                     </div>
                   </div>
