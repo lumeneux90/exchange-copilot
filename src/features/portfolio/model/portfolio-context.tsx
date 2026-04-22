@@ -166,15 +166,23 @@ export function buildPortfolioSnapshot(
 
 export function PortfolioProvider({
   children,
+  currentUser,
   initialPortfolio,
 }: {
   children: React.ReactNode;
+  currentUser: {
+    id: string;
+    login: string;
+  } | null;
   initialPortfolio?: PortfolioState | null;
 }) {
   const [portfolio, setPortfolio] = React.useState<PortfolioState>(
     initialPortfolio ?? emptyPortfolioState()
   );
   const [isPending, setIsPending] = React.useState(false);
+  const loadedPortfolioUserIdRef = React.useRef<string | null>(
+    initialPortfolio && currentUser ? currentUser.id : currentUser ? null : "__guest__"
+  );
 
   const refreshPortfolio = React.useCallback(async () => {
     setIsPending(true);
@@ -314,6 +322,27 @@ export function PortfolioProvider({
       tradeStock,
     ]
   );
+
+  React.useEffect(() => {
+    if (initialPortfolio) {
+      setPortfolio(initialPortfolio);
+      loadedPortfolioUserIdRef.current = currentUser?.id ?? "__guest__";
+      return;
+    }
+
+    if (!currentUser) {
+      setPortfolio(emptyPortfolioState());
+      loadedPortfolioUserIdRef.current = "__guest__";
+      return;
+    }
+
+    if (loadedPortfolioUserIdRef.current === currentUser.id) {
+      return;
+    }
+
+    loadedPortfolioUserIdRef.current = currentUser.id;
+    void refreshPortfolio();
+  }, [currentUser, initialPortfolio, refreshPortfolio]);
 
   return (
     <PortfolioContext.Provider value={value}>

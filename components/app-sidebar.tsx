@@ -25,6 +25,7 @@ import {
 } from "@remixicon/react";
 import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
+import { useCurrentUser } from "@/src/features/auth/model/current-user-context";
 
 const data = {
   navMain: [
@@ -58,16 +59,17 @@ const data = {
 export function AppSidebar({
   currencyRates,
   stocks,
-  user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   currencyRates: CurrencyRate[];
   stocks: Stock[];
-  user: {
-    login: string;
-    statusLabel: string;
-  };
 }) {
+  const currentUser = useCurrentUser();
+  const user = {
+    login: currentUser?.login ?? "unknown",
+    statusLabel: "Онлайн",
+  };
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>

@@ -5,7 +5,6 @@ import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PwaRegistration } from "@/src/features/pwa/ui/pwa-registration";
-import { getPortfolioState } from "@/src/features/portfolio/model/portfolio-server";
 import { getCurrentUser } from "@/src/lib/session";
 
 export const metadata: Metadata = {
@@ -34,7 +33,6 @@ type RootLayoutProps = Readonly<{
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   const user = await getCurrentUser();
-  const initialPortfolio = user ? await getPortfolioState(user.id) : null;
 
   return (
     <html
@@ -45,7 +43,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     >
       <body suppressHydrationWarning>
         <PwaRegistration />
-        <Providers currentUser={user} initialPortfolio={initialPortfolio}>
+        <Providers currentUser={user}>
           <TooltipProvider>
             {children}
             <Toaster richColors position="top-right" />
