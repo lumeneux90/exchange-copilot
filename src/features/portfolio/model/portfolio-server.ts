@@ -3,6 +3,7 @@ import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
 import type { PortfolioHistoryItem } from "@/src/features/portfolio/model/history";
+import { isActiveFxCurrencyCode } from "@/src/entities/market/model/currencies";
 import { calculateFxTradeFee } from "@/src/features/portfolio/model/fx-trade-fees";
 import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
 import { calculateStockTradeFee } from "@/src/features/portfolio/model/stock-trade-fees";
@@ -285,6 +286,10 @@ export async function tradeCurrency(params: {
   }
 
   const normalizedCode = code.trim().toUpperCase();
+
+  if (!isActiveFxCurrencyCode(normalizedCode)) {
+    throw new Error("Эта валюта больше недоступна для торгов.");
+  }
 
   const portfolio = await prisma.$transaction(async (tx) => {
     const currentPortfolio = await getOrCreatePortfolioRecord(tx, userId);

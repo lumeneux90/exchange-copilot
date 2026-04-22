@@ -1,3 +1,5 @@
+import { ACTIVE_FX_CURRENCY_CODES } from "@/src/entities/market/model/currencies";
+
 export type FxInstrument = {
   code: string;
   label: string;
@@ -5,7 +7,7 @@ export type FxInstrument = {
   cbrId: string;
 };
 
-export const FX_INSTRUMENTS: FxInstrument[] = [
+const ALL_FX_INSTRUMENTS: FxInstrument[] = [
   {
     code: "USD",
     label: "USD/RUB",
@@ -25,24 +27,16 @@ export const FX_INSTRUMENTS: FxInstrument[] = [
     cbrId: "R01375",
   },
   {
-    code: "GBP",
-    label: "GBP/RUB",
-    secid: "GBPRUB_TOM",
-    cbrId: "R01035",
-  },
-  {
     code: "HKD",
     label: "HKD/RUB",
     secid: "HKDRUB_TOM",
     cbrId: "R01200",
   },
-  {
-    code: "AED",
-    label: "AED/RUB",
-    secid: "AEDRUB_TOM",
-    cbrId: "R01230",
-  },
 ];
+
+export const FX_INSTRUMENTS: FxInstrument[] = ALL_FX_INSTRUMENTS.filter(
+  (instrument) => ACTIVE_FX_CURRENCY_CODES.includes(instrument.code as (typeof ACTIVE_FX_CURRENCY_CODES)[number])
+);
 
 export function getFxInstrumentByCode(code: string) {
   const normalizedCode = code.trim().toUpperCase();

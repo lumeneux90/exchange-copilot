@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { CurrencyFlag } from "@/components/currency-flag";
+import { getCurrencyLabel } from "@/src/entities/market/model/currencies";
 import {
   Collapsible,
   CollapsibleContent,
@@ -35,15 +36,6 @@ import {
 import { getErrorMessage } from "@/src/lib/errors";
 import { parseDecimalInput, rubFormatter } from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
-
-const currencyLabelMap: Record<string, string> = {
-  USD: "Доллар США",
-  EUR: "Евро",
-  CNY: "Китайский юань",
-  GBP: "Фунт стерлингов",
-  HKD: "Гонконгский доллар",
-  AED: "Дирхам ОАЭ",
-};
 
 function formatFxAmount(value: number) {
   return new Intl.NumberFormat("ru-RU", {
@@ -194,7 +186,7 @@ export function FxTradePanel({
                 <div className="min-w-0">
                   <div className="text-sm font-medium">{item.label}</div>
                   <div className="text-muted-foreground text-xs">
-                    {currencyLabelMap[item.code] ?? item.code}
+                    {getCurrencyLabel(item.code)}
                   </div>
                 </div>
               </div>
@@ -285,7 +277,7 @@ export function FxTradePanel({
                         <div className="flex min-w-0 flex-col">
                           <span className="font-medium">{code}</span>
                           <span className="text-muted-foreground text-[11px]">
-                            {currencyLabelMap[code] ?? code}
+                            {getCurrencyLabel(code)}
                           </span>
                         </div>
                       </div>

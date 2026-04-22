@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CurrencyFlag } from "@/components/currency-flag";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getCurrencyLabel } from "@/src/entities/market/model/currencies";
 import {
   Select,
   SelectContent,
@@ -29,15 +30,6 @@ import {
 } from "@/src/features/portfolio/model/portfolio-context";
 import { getErrorMessage } from "@/src/lib/errors";
 import { parseDecimalInput, rubFormatter } from "@/src/lib/money";
-
-const currencyLabelMap: Record<string, string> = {
-  USD: "Доллар США",
-  EUR: "Евро",
-  CNY: "Китайский юань",
-  GBP: "Фунт стерлингов",
-  HKD: "Гонконгский доллар",
-  AED: "Дирхам ОАЭ",
-};
 
 function formatFxAmount(value: number) {
   return new Intl.NumberFormat("ru-RU", {
@@ -194,7 +186,7 @@ export function SidebarFxTradeCard({
                         <div className="flex min-w-0 flex-col">
                           <span className="font-medium">{code}</span>
                           <span className="text-muted-foreground text-[11px]">
-                            {currencyLabelMap[code] ?? code}
+                            {getCurrencyLabel(code)}
                           </span>
                         </div>
                       </div>
