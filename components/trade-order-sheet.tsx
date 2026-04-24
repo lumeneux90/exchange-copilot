@@ -186,7 +186,7 @@ export function TradeOrderSheet({
         ticker: stock.ticker,
         side,
         quantity: parsedQuantity,
-        price: currentPrice,
+        quotedPrice: currentPrice,
       });
       setOpen(false);
       resetForm();

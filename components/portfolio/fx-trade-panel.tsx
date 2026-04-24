@@ -153,8 +153,8 @@ export function FxTradePanel({
       await tradeCurrency({
         amount: parsedAmount,
         code: selectedCode,
+        quotedRate: selectedRate.price,
         side,
-        rate: selectedRate.price,
       });
       setAmount(side === "buy" ? "10000" : "100");
       toast.success(
