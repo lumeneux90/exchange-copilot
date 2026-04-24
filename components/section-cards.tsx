@@ -318,10 +318,17 @@ function UserLeaderboardCarousel({
                 <div className="flex flex-col gap-3">
                   <div>
                     <div className="text-muted-foreground text-xs">
-                      Стоимость портфеля
+                      Доходность
                     </div>
-                    <div className="text-xl font-semibold tabular-nums">
-                      {priceRubFormatter.format(item.totalValue)}
+                    <div
+                      className={cn(
+                        "text-xl font-semibold tabular-nums",
+                        direction === "positive" && "text-primary",
+                        direction === "negative" && "text-destructive",
+                        direction === "neutral" && "text-muted-foreground"
+                      )}
+                    >
+                      {formatPercent(item.totalProfitLossPercent)}
                     </div>
                   </div>
 
@@ -340,16 +347,9 @@ function UserLeaderboardCarousel({
                       </div>
                     </div>
                     <div className="rounded-lg border px-3 py-2">
-                      <div className="text-muted-foreground">Доходность</div>
-                      <div
-                        className={cn(
-                          "font-medium tabular-nums",
-                          direction === "positive" && "text-primary",
-                          direction === "negative" && "text-destructive",
-                          direction === "neutral" && "text-muted-foreground"
-                        )}
-                      >
-                        {formatPercent(item.totalProfitLossPercent)}
+                      <div className="text-muted-foreground">Портфель</div>
+                      <div className="font-medium tabular-nums">
+                        {priceRubFormatter.format(item.totalValue)}
                       </div>
                     </div>
                   </div>
@@ -421,9 +421,9 @@ export function SectionCards({
       <Card className="@container/card @xl/main:col-span-2">
         <CardHeader>
           <CardTitle className="text-lg font-semibold @[250px]/card:text-xl">
-            Лидерборд
+            Статистика инвесторов
           </CardTitle>
-          <CardDescription>Рейтинг пользователей по стоимости портфеля</CardDescription>
+          <CardDescription>Рейтинг по доходности портфеля</CardDescription>
         </CardHeader>
         <CardContent>
           <UserLeaderboardCarousel items={leaderboard} />

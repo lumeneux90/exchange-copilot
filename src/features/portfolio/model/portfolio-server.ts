@@ -29,6 +29,7 @@ export type PortfolioLeaderboardItem = {
   cashBalance: number;
   currencyPositionsCount: number;
   holdingsCount: number;
+  investedAmount: number;
   login: string;
   rank: number;
   totalProfitLoss: number;
@@ -228,12 +229,26 @@ export async function getPortfolioLeaderboard(
       totalProfitLoss,
       totalProfitLossPercent,
       totalValue: cashBalance + holdingsValue + currenciesValue,
+      investedAmount,
       userId: user.id,
     };
   });
 
   return leaderboard
-    .sort((left, right) => right.totalValue - left.totalValue)
+    .sort((left, right) => {
+      const leftHasInvestments = left.investedAmount > 0;
+      const rightHasInvestments = right.investedAmount > 0;
+
+      if (leftHasInvestments !== rightHasInvestments) {
+        return leftHasInvestments ? -1 : 1;
+      }
+
+      return (
+        right.totalProfitLossPercent - left.totalProfitLossPercent ||
+        right.totalProfitLoss - left.totalProfitLoss ||
+        right.totalValue - left.totalValue
+      );
+    })
     .map((item, index) => ({
       ...item,
       rank: index + 1,
