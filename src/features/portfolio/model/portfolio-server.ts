@@ -2,8 +2,10 @@ import "server-only";
 
 import { Prisma, type PrismaClient } from "@prisma/client";
 
+import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { PortfolioHistoryItem } from "@/src/features/portfolio/model/history";
 import { isActiveFxCurrencyCode } from "@/src/entities/market/model/currencies";
+import type { Stock } from "@/src/entities/stock/model/types";
 import { calculateFxTradeFee } from "@/src/features/portfolio/model/fx-trade-fees";
 import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
 import { calculateStockTradeFee } from "@/src/features/portfolio/model/stock-trade-fees";
@@ -22,6 +24,18 @@ import type { PortfolioState } from "@/src/features/portfolio/model/types";
 
 const DECIMAL_SCALE = 8;
 const POSITION_EPSILON = 0.000001;
+
+export type PortfolioLeaderboardItem = {
+  cashBalance: number;
+  currencyPositionsCount: number;
+  holdingsCount: number;
+  login: string;
+  rank: number;
+  totalProfitLoss: number;
+  totalProfitLossPercent: number;
+  totalValue: number;
+  userId: string;
+};
 
 function toNumber(value: Prisma.Decimal | number | null | undefined) {
   if (value == null) {
@@ -139,6 +153,91 @@ export async function getPortfolioHistory(userId: string) {
   });
 
   return transactions.map(mapPortfolioTransaction);
+}
+
+export async function getPortfolioLeaderboard(
+  stocks: Stock[],
+  currencyRates: CurrencyRate[]
+): Promise<PortfolioLeaderboardItem[]> {
+  const prisma = getPrisma();
+  const pricesByTicker = new Map(stocks.map((stock) => [stock.ticker, stock]));
+  const ratesByCode = new Map(
+    currencyRates.map((rate) => [rate.label.split("/")[0] ?? rate.code, rate])
+  );
+  const users = await prisma.user.findMany({
+    include: {
+      portfolio: {
+        include: {
+          positions: true,
+        },
+      },
+    },
+    orderBy: {
+      login: "asc",
+    },
+  });
+
+  const leaderboard = users.map((user) => {
+    const portfolio = user.portfolio;
+    const positions = portfolio?.positions ?? [];
+    const cashBalance = toNumber(portfolio?.cashBalance);
+    let holdingsValue = 0;
+    let holdingsCostBasis = 0;
+    let currenciesValue = 0;
+    let currenciesCostBasis = 0;
+    let holdingsCount = 0;
+    let currencyPositionsCount = 0;
+
+    for (const position of positions) {
+      const quantity = toNumber(position.quantity);
+
+      if (position.type === "STOCK" && position.ticker) {
+        const currentPrice =
+          pricesByTicker.get(position.ticker)?.price ??
+          toNumber(position.averagePrice);
+        const averagePrice = toNumber(position.averagePrice);
+
+        holdingsCount += 1;
+        holdingsValue += currentPrice * quantity;
+        holdingsCostBasis += averagePrice * quantity;
+      }
+
+      if (position.type === "CURRENCY" && position.currencyCode) {
+        const currentRate =
+          ratesByCode.get(position.currencyCode)?.price ??
+          toNumber(position.averageRate);
+        const averageRate = toNumber(position.averageRate);
+
+        currencyPositionsCount += 1;
+        currenciesValue += currentRate * quantity;
+        currenciesCostBasis += averageRate * quantity;
+      }
+    }
+
+    const investedAmount = holdingsCostBasis + currenciesCostBasis;
+    const totalProfitLoss = holdingsValue + currenciesValue - investedAmount;
+    const totalProfitLossPercent =
+      investedAmount > 0 ? (totalProfitLoss / investedAmount) * 100 : 0;
+
+    return {
+      cashBalance,
+      currencyPositionsCount,
+      holdingsCount,
+      login: user.login,
+      rank: 0,
+      totalProfitLoss,
+      totalProfitLossPercent,
+      totalValue: cashBalance + holdingsValue + currenciesValue,
+      userId: user.id,
+    };
+  });
+
+  return leaderboard
+    .sort((left, right) => right.totalValue - left.totalValue)
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+    }));
 }
 
 export async function depositFunds(params: { userId: string; amount: number }) {
