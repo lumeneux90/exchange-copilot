@@ -24,7 +24,7 @@ import {
 } from "@/src/features/portfolio/model/deposit-rules";
 import { usePortfolio } from "@/src/features/portfolio/model/portfolio-context";
 import { getErrorMessage } from "@/src/lib/errors";
-import { parseDecimalInput, rubFormatterRounded } from "@/src/lib/money";
+import { parseDecimalInput, rubFormatter } from "@/src/lib/money";
 
 export function DepositFundsSheet({
   triggerLabel = "Пополнить счет",
@@ -48,16 +48,16 @@ export function DepositFundsSheet({
     parsedAmount >= MIN_DEPOSIT_AMOUNT && parsedAmount <= MAX_DEPOSIT_AMOUNT;
   const helperText =
     parsedAmount > MAX_DEPOSIT_AMOUNT
-      ? `Максимум за одно пополнение: ${rubFormatterRounded.format(
+      ? `Максимум за одно пополнение: ${rubFormatter.format(
           MAX_DEPOSIT_AMOUNT
         )}.`
-      : `Одно пополнение: от ${rubFormatterRounded.format(
+      : `Одно пополнение: от ${rubFormatter.format(
           MIN_DEPOSIT_AMOUNT
-        )} до ${rubFormatterRounded.format(
+        )} до ${rubFormatter.format(
           MAX_DEPOSIT_AMOUNT
-        )}. Кулдаун: ${getDepositCooldownHours()} ч. Лимиты: ${rubFormatterRounded.format(
+        )}. Кулдаун: ${getDepositCooldownHours()} ч. Лимиты: ${rubFormatter.format(
           WEEKLY_DEPOSIT_LIMIT
-        )} за 7 дней и ${rubFormatterRounded.format(
+        )} за 7 дней и ${rubFormatter.format(
           MONTHLY_DEPOSIT_LIMIT
         )} за 30 дней.`;
 

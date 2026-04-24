@@ -39,7 +39,8 @@ import { cn } from "@/src/lib/utils";
 
 function formatFxAmount(value: number) {
   return new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
@@ -152,8 +153,8 @@ export function FxTradePanel({
       await tradeCurrency({
         amount: parsedAmount,
         code: selectedCode,
+        quotedRate: selectedRate.price,
         side,
-        rate: selectedRate.price,
       });
       setAmount(side === "buy" ? "10000" : "100");
       toast.success(

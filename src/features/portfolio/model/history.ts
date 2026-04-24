@@ -9,3 +9,11 @@ export type PortfolioHistoryItem = {
   feeAmount: number;
   executedAt: string;
 };
+
+export type PortfolioHistoryPage = {
+  currentPage: number;
+  items: PortfolioHistoryItem[];
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};

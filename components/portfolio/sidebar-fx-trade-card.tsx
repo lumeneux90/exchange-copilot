@@ -33,7 +33,8 @@ import { parseDecimalInput, rubFormatter } from "@/src/lib/money";
 
 function formatFxAmount(value: number) {
   return new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
@@ -124,8 +125,8 @@ export function SidebarFxTradeCard({
       await tradeCurrency({
         amount: parsedAmount,
         code: selectedCode,
+        quotedRate: selectedRate.price,
         side,
-        rate: selectedRate.price,
       });
       setAmount(side === "buy" ? "10000" : "100");
       toast.success(

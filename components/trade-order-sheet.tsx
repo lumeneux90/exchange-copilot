@@ -49,7 +49,7 @@ function formatStockQuantity(value: number) {
   }).format(normalizeShareQuantity(value));
 }
 
-function formatEditableDecimal(value: number, maximumFractionDigits = 4) {
+function formatEditableDecimal(value: number, maximumFractionDigits = 2) {
   if (!Number.isFinite(value) || value <= 0) {
     return "0";
   }
@@ -186,7 +186,7 @@ export function TradeOrderSheet({
         ticker: stock.ticker,
         side,
         quantity: parsedQuantity,
-        price: currentPrice,
+        quotedPrice: currentPrice,
       });
       setOpen(false);
       resetForm();
@@ -258,7 +258,7 @@ export function TradeOrderSheet({
               </div>
               <div className="mt-1 text-sm font-semibold">
                 {selectedHolding
-                  ? `${selectedHolding.quantity} шт.`
+                  ? `${formatStockQuantity(selectedHolding.quantity)} шт.`
                   : "Нет позиции"}
               </div>
             </div>
@@ -280,7 +280,7 @@ export function TradeOrderSheet({
               </TabsTrigger>
               <TabsTrigger
                 value="sell"
-                className="data-active:border-transparent data-active:bg-destructive/10 data-active:text-destructive hover:data-active:bg-destructive/20 dark:data-active:bg-destructive/20 dark:hover:data-active:bg-destructive/30"
+                className="data-active:bg-destructive/10 data-active:text-destructive hover:data-active:bg-destructive/20 dark:data-active:bg-destructive/20 dark:hover:data-active:bg-destructive/30 data-active:border-transparent"
               >
                 Продать
               </TabsTrigger>
@@ -417,7 +417,7 @@ export function TradeOrderSheet({
                   </span>
                   <span>
                     {selectedHolding
-                      ? `${selectedHolding.quantity} шт.`
+                      ? `${formatStockQuantity(selectedHolding.quantity)} шт.`
                       : "0 шт."}
                   </span>
                 </div>
@@ -455,10 +455,6 @@ export function TradeOrderSheet({
                       : "0.00%"}
                   </span>
                 </div>
-              </div>
-              <div className="text-muted-foreground rounded-lg border p-3 text-sm">
-                Продажа использует текущую позицию и сразу обновляет остаток
-                портфеля в базе данных.
               </div>
               {!isStockMarketOpen ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">

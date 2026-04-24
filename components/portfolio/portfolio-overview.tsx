@@ -33,14 +33,14 @@ import {
   formatSignedCurrency,
   formatSignedPercent,
   rubFormatter,
-  rubFormatterRounded,
 } from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
 import React from "react";
 
 function formatCurrencyUnits(value: number, code: string) {
   return `${new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)} ${code}`;
 }
 
@@ -80,7 +80,7 @@ export function PortfolioOverview({
           <CardHeader>
             <CardDescription>Общая стоимость</CardDescription>
             <CardTitle className="text-2xl font-semibold">
-              {rubFormatterRounded.format(snapshot.totalValue)}
+              {rubFormatter.format(snapshot.totalValue)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -88,7 +88,7 @@ export function PortfolioOverview({
           <CardHeader>
             <CardDescription>Свободные деньги</CardDescription>
             <CardTitle className="text-2xl font-semibold">
-              {rubFormatterRounded.format(snapshot.cashBalance)}
+              {rubFormatter.format(snapshot.cashBalance)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -147,7 +147,7 @@ export function PortfolioOverview({
                       Стоимость
                     </div>
                     <div className="text-sm font-medium">
-                      {rubFormatterRounded.format(currency.marketValue)}
+                      {rubFormatter.format(currency.marketValue)}
                     </div>
                   </div>
                   <div className="space-y-1">
@@ -245,7 +245,7 @@ export function PortfolioOverview({
                       Стоимость
                     </div>
                     <div className="text-sm font-medium">
-                      {rubFormatterRounded.format(holding.marketValue)}
+                      {rubFormatter.format(holding.marketValue)}
                     </div>
                   </div>
                   <div className="space-y-1">

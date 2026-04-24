@@ -29,7 +29,7 @@ import type { Stock } from "@/src/entities/stock/model/types";
 import {
   formatSignedCurrency,
   formatSignedPercent,
-  rubFormatterRounded,
+  rubFormatter,
 } from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
 
@@ -145,7 +145,7 @@ export function SidebarPortfolioCard({
           <CardHeader className="gap-1">
             <CardDescription>Текущий счет</CardDescription>
             <CardTitle className="text-lg font-semibold">
-              {rubFormatterRounded.format(totalValue)}
+              {rubFormatter.format(totalValue)}
             </CardTitle>
             <div
               className={cn(
@@ -216,10 +216,10 @@ export function SidebarPortfolioCard({
                   </div>
                   <div className="text-right">
                     <div className="text-foreground font-medium">
-                      {rubFormatterRounded.format(segment.value)}
+                      {rubFormatter.format(segment.value)}
                     </div>
                     <div className="text-muted-foreground text-[11px]">
-                      {(segment.share * 100).toFixed(0)}%
+                      {(segment.share * 100).toFixed(2)}%
                     </div>
                   </div>
                 </div>

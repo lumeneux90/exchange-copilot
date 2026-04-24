@@ -3,7 +3,10 @@ import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
 import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
-import type { PortfolioHistoryItem } from "@/src/features/portfolio/model/history";
+import type {
+  PortfolioHistoryItem,
+  PortfolioHistoryPage,
+} from "@/src/features/portfolio/model/history";
 import { isActiveFxCurrencyCode } from "@/src/entities/market/model/currencies";
 import type { Stock } from "@/src/entities/stock/model/types";
 import { calculateFxTradeFee } from "@/src/features/portfolio/model/fx-trade-fees";
@@ -24,6 +27,9 @@ import type { PortfolioState } from "@/src/features/portfolio/model/types";
 
 const DECIMAL_SCALE = 8;
 const POSITION_EPSILON = 0.000001;
+const DEFAULT_HISTORY_PAGE_SIZE = 25;
+const MAX_HISTORY_PAGE_SIZE = 100;
+const SERIALIZABLE_TRANSACTION_RETRIES = 3;
 
 export type PortfolioLeaderboardItem = {
   cashBalance: number;
@@ -48,6 +54,55 @@ function toNumber(value: Prisma.Decimal | number | null | undefined) {
 
 function toDecimal(value: number) {
   return new Prisma.Decimal(value.toFixed(DECIMAL_SCALE));
+}
+
+function isSerializableTransactionConflict(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2034"
+  );
+}
+
+function isUniqueConstraintConflict(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
+function isRetriableTransactionConflict(error: unknown) {
+  return (
+    isSerializableTransactionConflict(error) ||
+    isUniqueConstraintConflict(error)
+  );
+}
+
+async function runSerializableTransaction<T>(
+  prisma: PrismaClient,
+  callback: (tx: Prisma.TransactionClient) => Promise<T>
+) {
+  for (
+    let attempt = 1;
+    attempt <= SERIALIZABLE_TRANSACTION_RETRIES;
+    attempt += 1
+  ) {
+    try {
+      return await prisma.$transaction(callback, {
+        isolationLevel: "Serializable",
+      });
+    } catch (error) {
+      if (
+        attempt < SERIALIZABLE_TRANSACTION_RETRIES &&
+        isRetriableTransactionConflict(error)
+      ) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error("Не удалось выполнить операцию с портфелем.");
 }
 
 function mapPortfolioTransaction(transaction: {
@@ -126,10 +181,37 @@ async function getOrCreatePortfolioRecord(
     return existingPortfolio;
   }
 
-  return db.portfolio.create({
-    data: {
-      userId,
-    },
+  try {
+    return await db.portfolio.create({
+      data: {
+        userId,
+      },
+      include: {
+        positions: true,
+      },
+    });
+  } catch (error) {
+    if (!isUniqueConstraintConflict(error)) {
+      throw error;
+    }
+
+    return db.portfolio.findUniqueOrThrow({
+      where: { userId },
+      include: {
+        positions: true,
+      },
+    });
+  }
+}
+
+async function upsertPortfolioRecord(
+  db: Prisma.TransactionClient,
+  userId: string
+) {
+  return db.portfolio.upsert({
+    where: { userId },
+    update: {},
+    create: { userId },
     include: {
       positions: true,
     },
@@ -154,6 +236,48 @@ export async function getPortfolioHistory(userId: string) {
   });
 
   return transactions.map(mapPortfolioTransaction);
+}
+
+export async function getPortfolioHistoryPage(
+  userId: string,
+  options: {
+    page?: number;
+    pageSize?: number;
+  } = {}
+): Promise<PortfolioHistoryPage> {
+  const prisma = getPrisma();
+  const portfolio = await getOrCreatePortfolioRecord(prisma, userId);
+  const pageSize = Math.min(
+    MAX_HISTORY_PAGE_SIZE,
+    Math.max(1, Math.floor(options.pageSize ?? DEFAULT_HISTORY_PAGE_SIZE))
+  );
+  const requestedPage = Math.max(1, Math.floor(options.page ?? 1));
+  const totalItems = await prisma.portfolioTransaction.count({
+    where: {
+      portfolioId: portfolio.id,
+    },
+  });
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const transactions =
+    totalItems === 0
+      ? []
+      : await prisma.portfolioTransaction.findMany({
+          where: {
+            portfolioId: portfolio.id,
+          },
+          orderBy: [{ executedAt: "desc" }, { createdAt: "desc" }],
+          skip: (currentPage - 1) * pageSize,
+          take: pageSize,
+        });
+
+  return {
+    currentPage,
+    items: transactions.map(mapPortfolioTransaction),
+    pageSize,
+    totalItems,
+    totalPages,
+  };
 }
 
 export async function getPortfolioLeaderboard(
@@ -271,8 +395,8 @@ export async function depositFunds(params: { userId: string; amount: number }) {
     );
   }
 
-  const portfolio = await prisma.$transaction(async (tx) => {
-    const currentPortfolio = await getOrCreatePortfolioRecord(tx, userId);
+  const portfolio = await runSerializableTransaction(prisma, async (tx) => {
+    const currentPortfolio = await upsertPortfolioRecord(tx, userId);
     const now = new Date();
     const lastDeposit = await tx.portfolioTransaction.findFirst({
       where: {
@@ -405,8 +529,8 @@ export async function tradeCurrency(params: {
     throw new Error("Эта валюта больше недоступна для торгов.");
   }
 
-  const portfolio = await prisma.$transaction(async (tx) => {
-    const currentPortfolio = await getOrCreatePortfolioRecord(tx, userId);
+  const portfolio = await runSerializableTransaction(prisma, async (tx) => {
+    const currentPortfolio = await upsertPortfolioRecord(tx, userId);
     const currentCashBalance = toNumber(currentPortfolio.cashBalance);
     const currentPosition = currentPortfolio.positions.find(
       (position) =>
@@ -564,8 +688,8 @@ export async function tradeStock(params: {
     );
   }
 
-  const portfolio = await prisma.$transaction(async (tx) => {
-    const currentPortfolio = await getOrCreatePortfolioRecord(tx, userId);
+  const portfolio = await runSerializableTransaction(prisma, async (tx) => {
+    const currentPortfolio = await upsertPortfolioRecord(tx, userId);
     const currentCashBalance = toNumber(currentPortfolio.cashBalance);
     const currentPosition = currentPortfolio.positions.find(
       (position) =>
