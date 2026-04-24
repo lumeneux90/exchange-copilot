@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+import { IconMark } from "@/app/icon-mark";
+
 export const runtime = "nodejs";
 
 export async function GET() {
@@ -14,14 +16,10 @@ export async function GET() {
           justifyContent: "center",
           background:
             "linear-gradient(135deg, rgb(13, 122, 67) 0%, rgb(12, 92, 93) 55%, rgb(7, 62, 77) 100%)",
-          color: "white",
-          fontSize: 82,
-          fontWeight: 800,
-          letterSpacing: -4,
           borderRadius: 40,
         }}
       >
-        XC
+        <IconMark size={112} />
       </div>
     ),
     {

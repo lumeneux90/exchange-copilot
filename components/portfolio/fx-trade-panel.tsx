@@ -178,19 +178,21 @@ export function FxTradePanel({
             <button
               key={item.code}
               type="button"
-              className="hover:bg-accent/40 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors"
+              className="hover:bg-accent/40 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors"
               onClick={() => router.push(`/chart?fx=${item.code}`)}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <CurrencyFlag code={item.code} className="size-8" />
+                <CurrencyFlag code={item.code} className="size-8 shrink-0" />
                 <div className="min-w-0">
-                  <div className="text-sm font-medium">{item.label}</div>
-                  <div className="text-muted-foreground text-xs">
+                  <div className="truncate text-sm font-medium">
+                    {item.label}
+                  </div>
+                  <div className="text-muted-foreground truncate text-xs">
                     {getCurrencyLabel(item.code)}
                   </div>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="min-w-fit pl-2 text-right">
                 <div className="text-sm font-medium tabular-nums">
                   {rubFormatter.format(item.price)}
                 </div>
@@ -209,7 +211,7 @@ export function FxTradePanel({
         open={isTradeOpen}
         onOpenChange={setIsTradeOpen}
         className={cn(
-          "rounded-xl border p-1 transition-colors",
+          "min-w-0 overflow-hidden rounded-xl border p-1 transition-colors",
           isTradeOpen ? "bg-muted/60" : "bg-transparent"
         )}
       >
@@ -218,24 +220,24 @@ export function FxTradePanel({
             <Button
               type="button"
               variant="ghost"
-              className="h-auto w-full justify-start rounded-md px-3 py-3 text-left"
+              className="h-auto min-w-0 w-full justify-start whitespace-normal rounded-md px-3 py-3 text-left"
             >
               <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
                 <span className="text-sm font-medium">Быстрый обмен</span>
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground min-w-0 text-xs leading-snug">
                   Откройте форму для покупки или продажи валюты
                 </span>
               </div>
               {isTradeOpen ? (
-                <RiArrowUpSLine data-icon="inline-end" />
+                <RiArrowUpSLine data-icon="inline-end" className="ml-2" />
               ) : (
-                <RiArrowDownSLine data-icon="inline-end" />
+                <RiArrowDownSLine data-icon="inline-end" className="ml-2" />
               )}
             </Button>
           }
         />
 
-        <CollapsibleContent className="grid gap-3 px-3 pt-1 pb-3">
+        <CollapsibleContent className="grid min-w-0 gap-3 px-2 pt-1 pb-3 sm:px-3">
           <Tabs
             value={side}
             onValueChange={(value) =>
@@ -249,8 +251,8 @@ export function FxTradePanel({
             </TabsList>
           </Tabs>
 
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            <div className="space-y-1.5">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="min-w-0 space-y-1.5">
               <Label htmlFor="fx-card-currency">Валюта</Label>
               <Select
                 value={selectedCode}
@@ -287,7 +289,7 @@ export function FxTradePanel({
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="min-w-0 space-y-1.5">
               <Label htmlFor="fx-card-amount">
                 {getAmountLabel(side, selectedCode)}
               </Label>
@@ -302,32 +304,34 @@ export function FxTradePanel({
             </div>
           </div>
 
-          <div className="grid gap-2 text-xs sm:grid-cols-2">
-            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-              <span className="text-muted-foreground">Курс</span>
-              <span>
+          <div className="grid min-w-0 gap-2 text-xs sm:grid-cols-2">
+            <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <span className="text-muted-foreground shrink-0">Курс</span>
+              <span className="min-w-0 truncate text-right">
                 {selectedRate ? rubFormatter.format(selectedRate.price) : "—"}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-              <span className="text-muted-foreground">Комиссия</span>
-              <span>{rubFormatter.format(parsedFee)}</span>
+            <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <span className="text-muted-foreground shrink-0">Комиссия</span>
+              <span className="min-w-0 truncate text-right">
+                {rubFormatter.format(parsedFee)}
+              </span>
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-              <span className="text-muted-foreground">
+            <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <span className="text-muted-foreground min-w-0">
                 {side === "buy" ? "Будет куплено" : "Поступит на счет"}
               </span>
-              <span>
+              <span className="min-w-0 truncate text-right">
                 {selectedRate
                   ? side === "buy"
                     ? `${formatFxAmount(fxQuantity)} ${selectedCode}`
                     : rubFormatter.format(sellNetAmount)
-                  : "—"}
+                : "—"}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-              <span className="text-muted-foreground">В наличии</span>
-              <span>
+            <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <span className="text-muted-foreground shrink-0">В наличии</span>
+              <span className="min-w-0 truncate text-right">
                 {currentBalance
                   ? `${formatFxAmount(currentBalance.quantity)} ${selectedCode}`
                   : `0 ${selectedCode}`}
@@ -339,6 +343,7 @@ export function FxTradePanel({
             onClick={() => void handleSubmit()}
             disabled={!canTrade || isPending}
             title={disabledReason ?? undefined}
+            className="w-full"
           >
             <RiExchangeDollarLine />
             {selectedCode

@@ -4,6 +4,7 @@ import { SectionCards } from "@/components/section-cards";
 import { getCurrencyRates } from "@/src/entities/market/api/get-currency-rates";
 import { getMoexIndex } from "@/src/entities/index/api/get-moex-index";
 import { getStocks } from "@/src/entities/stock/api/get-stocks";
+import { getPortfolioLeaderboard } from "@/src/features/portfolio/model/portfolio-server";
 
 function getMarketSummary(
   stocks: Awaited<ReturnType<typeof getStocks>>,
@@ -39,6 +40,7 @@ export default async function HomePage() {
     getCurrencyRates(),
     getMoexIndex(),
   ]);
+  const leaderboard = await getPortfolioLeaderboard(stocks, currencyRates);
   const summary = getMarketSummary(stocks, currencyRates, moexIndex);
 
   return (
@@ -48,7 +50,7 @@ export default async function HomePage() {
       stocks={stocks}
     >
       <section id="market-overview">
-        <SectionCards summary={summary} />
+        <SectionCards leaderboard={leaderboard} summary={summary} />
       </section>
       <section id="stocks-table">
         <DataTable data={stocks} />

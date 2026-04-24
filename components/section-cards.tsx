@@ -11,6 +11,8 @@ import {
 
 import { CompanyLogo } from "@/components/company-logo";
 import { FxTradePanel } from "@/components/portfolio/fx-trade-panel";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -18,8 +20,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
+import type { PortfolioLeaderboardItem } from "@/src/features/portfolio/model/portfolio-server";
 import type { Stock } from "@/src/entities/stock/model/types";
+import { getUserInitials } from "@/src/lib/user";
 import { cn } from "@/src/lib/utils";
 
 type MarketSummary = {
@@ -163,7 +174,7 @@ function MarketTopList({
   }
 
   return (
-    <div className="space-y-1">
+    <div className="flex flex-col gap-1">
       {items.map((item) => {
         const direction = getTrendDirection(item.changePercent);
 
@@ -257,7 +268,112 @@ function MarketTopList({
   );
 }
 
-export function SectionCards({ summary }: { summary: MarketSummary }) {
+function UserLeaderboardCarousel({
+  items,
+}: {
+  items: PortfolioLeaderboardItem[];
+}) {
+  if (!items.length) {
+    return (
+      <div className="text-muted-foreground bg-muted/30 rounded-2xl px-4 py-6 text-center text-sm">
+        Пока нет пользователей для рейтинга.
+      </div>
+    );
+  }
+
+  return (
+    <Carousel opts={{ align: "start" }} className="min-w-0">
+      <CarouselContent className="-ml-3">
+        {items.map((item) => {
+          const direction = getTrendDirection(item.totalProfitLoss);
+
+          return (
+            <CarouselItem
+              key={item.userId}
+              className="pl-3 sm:basis-1/2 xl:basis-1/3"
+            >
+              <div className="flex h-full min-w-0 flex-col gap-4 rounded-xl border bg-background/40 p-4">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar size="lg">
+                      <AvatarFallback>
+                        {getUserInitials(item.login)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">
+                        {item.login}
+                      </div>
+                      <div className="text-muted-foreground text-xs">
+                        {item.holdingsCount + item.currencyPositionsCount}{" "}
+                        позиций
+                      </div>
+                    </div>
+                  </div>
+                  <Badge variant={item.rank <= 3 ? "secondary" : "outline"}>
+                    #{item.rank}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <div className="text-muted-foreground text-xs">
+                      Доходность
+                    </div>
+                    <div
+                      className={cn(
+                        "text-xl font-semibold tabular-nums",
+                        direction === "positive" && "text-primary",
+                        direction === "negative" && "text-destructive",
+                        direction === "neutral" && "text-muted-foreground"
+                      )}
+                    >
+                      {formatPercent(item.totalProfitLossPercent)}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg border px-3 py-2">
+                      <div className="text-muted-foreground">P/L</div>
+                      <div
+                        className={cn(
+                          "font-medium tabular-nums",
+                          direction === "positive" && "text-primary",
+                          direction === "negative" && "text-destructive",
+                          direction === "neutral" && "text-muted-foreground"
+                        )}
+                      >
+                        {priceRubFormatter.format(item.totalProfitLoss)}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border px-3 py-2">
+                      <div className="text-muted-foreground">Портфель</div>
+                      <div className="font-medium tabular-nums">
+                        {priceRubFormatter.format(item.totalValue)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CarouselItem>
+          );
+        })}
+      </CarouselContent>
+      <div className="mt-3 flex justify-end gap-2">
+        <CarouselPrevious className="static translate-none" />
+        <CarouselNext className="static translate-none" />
+      </div>
+    </Carousel>
+  );
+}
+
+export function SectionCards({
+  leaderboard,
+  summary,
+}: {
+  leaderboard: PortfolioLeaderboardItem[];
+  summary: MarketSummary;
+}) {
   const router = useRouter();
   const moexIndexDirection = getTrendDirection(summary.moexIndexChangePercent);
   const [leadersView, setLeadersView] = React.useState<"gainers" | "losers">(
@@ -279,7 +395,7 @@ export function SectionCards({ summary }: { summary: MarketSummary }) {
           </CardTitle>
           <CardDescription>{summary.moexIndexLabel}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="flex flex-col gap-3">
           <div className="text-2xl font-semibold tabular-nums">
             {formatIndexValue(summary.moexIndexValue)} пт.
           </div>
@@ -299,6 +415,18 @@ export function SectionCards({ summary }: { summary: MarketSummary }) {
         </CardHeader>
         <CardContent>
           <FxTradePanel currencyRates={summary.currencyRates} />
+        </CardContent>
+      </Card>
+
+      <Card className="@container/card @xl/main:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold @[250px]/card:text-xl">
+            Статистика инвесторов
+          </CardTitle>
+          <CardDescription>Рейтинг по доходности портфеля</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UserLeaderboardCarousel items={leaderboard} />
         </CardContent>
       </Card>
 

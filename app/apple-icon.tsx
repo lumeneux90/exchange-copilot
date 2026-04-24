@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+import { IconMark } from "@/app/icon-mark";
+
 export const size = {
   width: 180,
   height: 180,
@@ -19,14 +21,10 @@ export default function AppleIcon() {
           justifyContent: "center",
           background:
             "linear-gradient(135deg, rgb(13, 122, 67) 0%, rgb(12, 92, 93) 55%, rgb(7, 62, 77) 100%)",
-          color: "white",
-          fontSize: 76,
-          fontWeight: 800,
-          letterSpacing: -4,
           borderRadius: 38,
         }}
       >
-        XC
+        <IconMark size={104} />
       </div>
     ),
     size
