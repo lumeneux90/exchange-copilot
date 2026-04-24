@@ -33,7 +33,8 @@ import { parseDecimalInput, rubFormatter } from "@/src/lib/money";
 
 function formatFxAmount(value: number) {
   return new Intl.NumberFormat("ru-RU", {
-    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 

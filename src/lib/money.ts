@@ -1,13 +1,8 @@
 export const rubFormatter = new Intl.NumberFormat("ru-RU", {
   style: "currency",
   currency: "RUB",
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
-});
-
-export const rubFormatterRounded = new Intl.NumberFormat("ru-RU", {
-  style: "currency",
-  currency: "RUB",
-  maximumFractionDigits: 0,
 });
 
 export function parseDecimalInput(value: string) {
@@ -25,7 +20,7 @@ export function formatSignedPercent(value: number) {
 
 export function formatSignedCurrency(
   value: number,
-  formatter: Intl.NumberFormat = rubFormatterRounded
+  formatter: Intl.NumberFormat = rubFormatter
 ) {
   const sign = value > 0 ? "+" : "";
 

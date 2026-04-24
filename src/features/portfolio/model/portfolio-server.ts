@@ -3,7 +3,10 @@ import "server-only";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
 import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
-import type { PortfolioHistoryItem } from "@/src/features/portfolio/model/history";
+import type {
+  PortfolioHistoryItem,
+  PortfolioHistoryPage,
+} from "@/src/features/portfolio/model/history";
 import { isActiveFxCurrencyCode } from "@/src/entities/market/model/currencies";
 import type { Stock } from "@/src/entities/stock/model/types";
 import { calculateFxTradeFee } from "@/src/features/portfolio/model/fx-trade-fees";
@@ -24,6 +27,8 @@ import type { PortfolioState } from "@/src/features/portfolio/model/types";
 
 const DECIMAL_SCALE = 8;
 const POSITION_EPSILON = 0.000001;
+const DEFAULT_HISTORY_PAGE_SIZE = 25;
+const MAX_HISTORY_PAGE_SIZE = 100;
 
 export type PortfolioLeaderboardItem = {
   cashBalance: number;
@@ -154,6 +159,48 @@ export async function getPortfolioHistory(userId: string) {
   });
 
   return transactions.map(mapPortfolioTransaction);
+}
+
+export async function getPortfolioHistoryPage(
+  userId: string,
+  options: {
+    page?: number;
+    pageSize?: number;
+  } = {}
+): Promise<PortfolioHistoryPage> {
+  const prisma = getPrisma();
+  const portfolio = await getOrCreatePortfolioRecord(prisma, userId);
+  const pageSize = Math.min(
+    MAX_HISTORY_PAGE_SIZE,
+    Math.max(1, Math.floor(options.pageSize ?? DEFAULT_HISTORY_PAGE_SIZE))
+  );
+  const requestedPage = Math.max(1, Math.floor(options.page ?? 1));
+  const totalItems = await prisma.portfolioTransaction.count({
+    where: {
+      portfolioId: portfolio.id,
+    },
+  });
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const transactions =
+    totalItems === 0
+      ? []
+      : await prisma.portfolioTransaction.findMany({
+          where: {
+            portfolioId: portfolio.id,
+          },
+          orderBy: [{ executedAt: "desc" }, { createdAt: "desc" }],
+          skip: (currentPage - 1) * pageSize,
+          take: pageSize,
+        });
+
+  return {
+    currentPage,
+    items: transactions.map(mapPortfolioTransaction),
+    pageSize,
+    totalItems,
+    totalPages,
+  };
 }
 
 export async function getPortfolioLeaderboard(
