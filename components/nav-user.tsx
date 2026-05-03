@@ -23,11 +23,6 @@ import {
   RiLogoutBoxLine,
   RiMore2Line,
 } from "@remixicon/react";
-import {
-  PASSCODE_SETUP_PENDING_SESSION_KEY,
-  PASSCODE_UNLOCKED_SESSION_KEY,
-  PASSCODE_SKIP_ONCE_SESSION_KEY,
-} from "@/src/features/passcode/model/storage";
 import { getUserInitials } from "@/src/lib/user";
 
 export function NavUser({
@@ -47,9 +42,6 @@ export function NavUser({
       method: "POST",
     });
 
-    window.sessionStorage.removeItem(PASSCODE_SKIP_ONCE_SESSION_KEY);
-    window.sessionStorage.removeItem(PASSCODE_SETUP_PENDING_SESSION_KEY);
-    window.sessionStorage.removeItem(PASSCODE_UNLOCKED_SESSION_KEY);
     router.push("/login");
     router.refresh();
   }
