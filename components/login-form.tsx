@@ -27,12 +27,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  PASSCODE_SETUP_PENDING_SESSION_KEY,
-  PASSCODE_STORAGE_KEY,
-  PASSCODE_UNLOCKED_SESSION_KEY,
-  PASSCODE_SKIP_ONCE_SESSION_KEY,
-} from "@/src/features/passcode/model/storage";
-import {
   getRegisterErrorMessage,
   registerSchema,
 } from "@/src/lib/auth-validation";
@@ -134,31 +128,6 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
               : "Не удалось выполнить вход.")
         );
         return;
-      }
-
-      if (!isInviteSignupVisible) {
-        const hasStoredPasscode = Boolean(
-          window.localStorage.getItem(PASSCODE_STORAGE_KEY)
-        );
-
-        if (!hasStoredPasscode) {
-          window.sessionStorage.setItem(
-            PASSCODE_SKIP_ONCE_SESSION_KEY,
-            payload.login
-          );
-          window.sessionStorage.setItem(
-            PASSCODE_UNLOCKED_SESSION_KEY,
-            payload.login
-          );
-          window.sessionStorage.setItem(
-            PASSCODE_SETUP_PENDING_SESSION_KEY,
-            payload.login
-          );
-        } else {
-          window.sessionStorage.removeItem(PASSCODE_SKIP_ONCE_SESSION_KEY);
-          window.sessionStorage.removeItem(PASSCODE_UNLOCKED_SESSION_KEY);
-          window.sessionStorage.removeItem(PASSCODE_SETUP_PENDING_SESSION_KEY);
-        }
       }
 
       startTransition(() => {
