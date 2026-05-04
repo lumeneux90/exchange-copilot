@@ -7,6 +7,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env.XC_COPILOT_STORAGE_DATABASE_URL,
+    url: process.env.XC_COPILOT_DATABASE_URL,
   },
 });
