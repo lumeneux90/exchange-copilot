@@ -20,7 +20,10 @@ export function getRemainingCooldownMs(lastDepositAt: Date, now = new Date()) {
   return Math.max(0, DEPOSIT_COOLDOWN_MS - elapsedMs);
 }
 
-export function getRemainingCooldownMinutes(lastDepositAt: Date, now = new Date()) {
+export function getRemainingCooldownMinutes(
+  lastDepositAt: Date,
+  now = new Date()
+) {
   return Math.ceil(getRemainingCooldownMs(lastDepositAt, now) / 60_000);
 }
 

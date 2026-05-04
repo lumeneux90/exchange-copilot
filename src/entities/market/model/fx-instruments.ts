@@ -35,11 +35,16 @@ const ALL_FX_INSTRUMENTS: FxInstrument[] = [
 ];
 
 export const FX_INSTRUMENTS: FxInstrument[] = ALL_FX_INSTRUMENTS.filter(
-  (instrument) => ACTIVE_FX_CURRENCY_CODES.includes(instrument.code as (typeof ACTIVE_FX_CURRENCY_CODES)[number])
+  (instrument) =>
+    ACTIVE_FX_CURRENCY_CODES.includes(
+      instrument.code as (typeof ACTIVE_FX_CURRENCY_CODES)[number]
+    )
 );
 
 export function getFxInstrumentByCode(code: string) {
   const normalizedCode = code.trim().toUpperCase();
 
-  return FX_INSTRUMENTS.find((instrument) => instrument.code === normalizedCode);
+  return FX_INSTRUMENTS.find(
+    (instrument) => instrument.code === normalizedCode
+  );
 }

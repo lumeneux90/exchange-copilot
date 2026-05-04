@@ -13,7 +13,9 @@ type WatchlistContextValue = {
 const STORAGE_KEY = "xchange-copilot-watchlist";
 const MAX_WATCHLIST_ITEMS = 10;
 
-const WatchlistContext = React.createContext<WatchlistContextValue | null>(null);
+const WatchlistContext = React.createContext<WatchlistContextValue | null>(
+  null
+);
 
 function parseStoredWatchlist(value: string | null) {
   if (!value) {
@@ -37,11 +39,7 @@ function parseStoredWatchlist(value: string | null) {
   }
 }
 
-export function WatchlistProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function WatchlistProvider({ children }: { children: React.ReactNode }) {
   const [tickers, setTickers] = React.useState<string[]>([]);
   const [hasLoaded, setHasLoaded] = React.useState(false);
 

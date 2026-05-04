@@ -87,8 +87,9 @@ export async function getMoexIndex(): Promise<MoexIndexSnapshot | null> {
       directChangePercent ||
       (openValue > 0 ? ((currentValue - openValue) / openValue) * 100 : 0);
     const shortName =
-      String(getColumnValue(security, securityColumns, "SHORTNAME") ?? "").trim() ||
-      "Индекс Мосбиржи";
+      String(
+        getColumnValue(security, securityColumns, "SHORTNAME") ?? ""
+      ).trim() || "Индекс Мосбиржи";
 
     if (currentValue <= 0) {
       return null;

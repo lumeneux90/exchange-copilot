@@ -73,22 +73,22 @@ function getTradedValue(data: {
   marketData?: MoexRow;
   marketDataColumns: string[];
 }) {
-  return getFirstFiniteColumnValue(data.marketData ?? [], data.marketDataColumns, [
-    "VALTODAY",
-    "VALUE",
-    "VALTOUSDAY",
-  ]);
+  return getFirstFiniteColumnValue(
+    data.marketData ?? [],
+    data.marketDataColumns,
+    ["VALTODAY", "VALUE", "VALTOUSDAY"]
+  );
 }
 
 function getTradedVolume(data: {
   marketData?: MoexRow;
   marketDataColumns: string[];
 }) {
-  return getFirstFiniteColumnValue(data.marketData ?? [], data.marketDataColumns, [
-    "VOLTODAY",
-    "VOLUME",
-    "NUMTRADES",
-  ]);
+  return getFirstFiniteColumnValue(
+    data.marketData ?? [],
+    data.marketDataColumns,
+    ["VOLTODAY", "VOLUME", "NUMTRADES"]
+  );
 }
 
 function getApproximateMarketCap(

@@ -3,6 +3,7 @@
 
 import { ThemeProvider } from "next-themes";
 import { CurrentUserProvider } from "@/src/features/auth/model/current-user-context";
+import { FinanceProvider } from "@/src/features/finance/model/finance-context";
 import { PortfolioProvider } from "@/src/features/portfolio/model/portfolio-context";
 import { WatchlistProvider } from "@/src/features/watchlist/model/watchlist-context";
 
@@ -20,7 +21,9 @@ export function Providers({
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <CurrentUserProvider currentUser={currentUser}>
         <PortfolioProvider currentUser={currentUser}>
-          <WatchlistProvider>{children}</WatchlistProvider>
+          <FinanceProvider currentUser={currentUser}>
+            <WatchlistProvider>{children}</WatchlistProvider>
+          </FinanceProvider>
         </PortfolioProvider>
       </CurrentUserProvider>
     </ThemeProvider>

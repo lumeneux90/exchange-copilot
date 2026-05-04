@@ -39,7 +39,12 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       lang="ru"
       suppressHydrationWarning
       className="font-sans"
-      style={{ "--font-sans": "system-ui, -apple-system, BlinkMacSystemFont, sans-serif" } as React.CSSProperties}
+      style={
+        {
+          "--font-sans":
+            "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        } as React.CSSProperties
+      }
     >
       <body suppressHydrationWarning>
         <PwaRegistration />

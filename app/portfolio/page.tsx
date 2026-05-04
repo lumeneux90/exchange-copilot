@@ -10,7 +10,11 @@ export default async function PortfolioPage() {
   ]);
 
   return (
-    <DashboardShell title="Портфель" currencyRates={currencyRates} stocks={stocks}>
+    <DashboardShell
+      title="Портфель"
+      currencyRates={currencyRates}
+      stocks={stocks}
+    >
       <PortfolioOverview currencyRates={currencyRates} stocks={stocks} />
     </DashboardShell>
   );

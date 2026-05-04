@@ -34,7 +34,9 @@ async function findCopyArtifacts(directory) {
     }
 
     if (duplicateCopyPattern.test(entry.name)) {
-      artifacts.push(path.relative(rootDirectory, path.join(directory, entry.name)));
+      artifacts.push(
+        path.relative(rootDirectory, path.join(directory, entry.name))
+      );
     }
   }
 

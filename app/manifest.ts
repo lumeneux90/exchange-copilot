@@ -4,7 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Xchange Copilot",
     short_name: "Xchange",
-    description: "Котировки, валюты и портфель в удобном формате устанавливаемого веб-приложения.",
+    description:
+      "Котировки, валюты и портфель в удобном формате устанавливаемого веб-приложения.",
     start_url: "/",
     scope: "/",
     display: "standalone",

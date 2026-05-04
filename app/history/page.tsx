@@ -56,7 +56,11 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   ]);
 
   return (
-    <DashboardShell title="История" currencyRates={currencyRates} stocks={stocks}>
+    <DashboardShell
+      title="История"
+      currencyRates={currencyRates}
+      stocks={stocks}
+    >
       <section className="px-4 lg:px-6">
         {historyPage.totalItems > 0 ? (
           <HistoryTable

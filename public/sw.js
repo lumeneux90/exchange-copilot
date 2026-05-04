@@ -15,7 +15,11 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key)))
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_VERSION)
+            .map((key) => caches.delete(key))
+        )
       )
       .then(() => self.clients.claim())
   );
@@ -62,7 +66,9 @@ self.addEventListener("fetch", (event) => {
         const networkResponse = fetch(request)
           .then((response) => {
             const responseClone = response.clone();
-            caches.open(CACHE_VERSION).then((cache) => cache.put(request, responseClone));
+            caches
+              .open(CACHE_VERSION)
+              .then((cache) => cache.put(request, responseClone));
             return response;
           })
           .catch(() => cachedResponse);

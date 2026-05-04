@@ -27,7 +27,9 @@ export const registerSchema = z
     }
   });
 
-type FlattenedFieldErrors = Partial<Record<keyof z.infer<typeof registerSchema>, string[]>>;
+type FlattenedFieldErrors = Partial<
+  Record<keyof z.infer<typeof registerSchema>, string[]>
+>;
 
 export function getRegisterErrorMessage(fieldErrors: FlattenedFieldErrors) {
   return (

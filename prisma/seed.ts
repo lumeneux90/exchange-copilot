@@ -15,13 +15,78 @@ const prisma = new PrismaClient({ adapter });
 
 const login = process.env.SEED_USER_LOGIN ?? "admin";
 const password = process.env.SEED_USER_PASSWORD ?? "admin12345";
+const counterpartyLogin = process.env.SEED_COUNTERPARTY_LOGIN ?? "analyst";
+const counterpartyPassword =
+  process.env.SEED_COUNTERPARTY_PASSWORD ?? "analyst12345";
+
+type FinancialAccountSeed = {
+  asset: "RUB" | "USD" | "XCP";
+  balance: number;
+};
+
+const financialAccountSeeds = [
+  {
+    asset: "RUB",
+    balance: 125_000,
+  },
+  {
+    asset: "USD",
+    balance: 1_250,
+  },
+  {
+    asset: "XCP",
+    balance: 350,
+  },
+] satisfies FinancialAccountSeed[];
+
+const counterpartyFinancialAccountSeeds = [
+  {
+    asset: "RUB",
+    balance: 72_500,
+  },
+  {
+    asset: "USD",
+    balance: 640,
+  },
+  {
+    asset: "XCP",
+    balance: 180,
+  },
+] satisfies FinancialAccountSeed[];
 
 function decimal(value: number) {
   return new Prisma.Decimal(value.toFixed(8));
 }
 
+async function upsertFinancialAccounts(
+  userId: string,
+  accounts: FinancialAccountSeed[]
+) {
+  await Promise.all(
+    accounts.map((account) =>
+      prisma.financialAccount.upsert({
+        where: {
+          userId_asset: {
+            asset: account.asset,
+            userId,
+          },
+        },
+        update: {
+          balance: decimal(account.balance),
+        },
+        create: {
+          asset: account.asset,
+          balance: decimal(account.balance),
+          userId,
+        },
+      })
+    )
+  );
+}
+
 async function main() {
   const passwordHash = await bcrypt.hash(password, 12);
+  const counterpartyPasswordHash = await bcrypt.hash(counterpartyPassword, 12);
 
   const user = await prisma.user.upsert({
     where: { login },
@@ -32,6 +97,64 @@ async function main() {
       login,
       passwordHash,
     },
+  });
+  const counterpartyUser = await prisma.user.upsert({
+    where: { login: counterpartyLogin },
+    update: {
+      passwordHash: counterpartyPasswordHash,
+    },
+    create: {
+      login: counterpartyLogin,
+      passwordHash: counterpartyPasswordHash,
+    },
+  });
+
+  await prisma.financialOrder.deleteMany({
+    where: {
+      OR: [
+        { creatorUserId: user.id },
+        { acceptedByUserId: user.id },
+        { creatorUserId: counterpartyUser.id },
+        { acceptedByUserId: counterpartyUser.id },
+      ],
+    },
+  });
+
+  await Promise.all([
+    upsertFinancialAccounts(user.id, financialAccountSeeds),
+    upsertFinancialAccounts(
+      counterpartyUser.id,
+      counterpartyFinancialAccountSeeds
+    ),
+  ]);
+
+  await prisma.financialOrder.createMany({
+    data: [
+      {
+        amount: decimal(12_500),
+        asset: "RUB",
+        creatorUserId: counterpartyUser.id,
+      },
+      {
+        amount: decimal(150),
+        asset: "USD",
+        creatorUserId: user.id,
+      },
+      {
+        amount: decimal(25),
+        asset: "XCP",
+        creatorUserId: counterpartyUser.id,
+        acceptedAt: new Date("2026-04-02T10:00:00.000Z"),
+        acceptedByUserId: user.id,
+        status: "ACCEPTED",
+      },
+      {
+        amount: decimal(3_000),
+        asset: "RUB",
+        creatorUserId: user.id,
+        status: "CANCELLED",
+      },
+    ],
   });
 
   const portfolio = await prisma.portfolio.upsert({
@@ -193,6 +316,11 @@ async function main() {
   console.log("Seed user is ready:");
   console.log(`login: ${login}`);
   console.log(`password: ${password}`);
+  console.log("Seed counterparty user is ready:");
+  console.log(`login: ${counterpartyLogin}`);
+  console.log(`password: ${counterpartyPassword}`);
+  console.log("Seed financial accounts are ready.");
+  console.log("Seed financial orders are ready.");
   console.log("Seed portfolio is ready.");
   console.log(`portfolioId: ${portfolio.id}`);
 }
