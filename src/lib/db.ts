@@ -6,10 +6,10 @@ const globalForPrisma = globalThis as typeof globalThis & {
 };
 
 function createPrismaClient() {
-  const connectionString = process.env.XC_COPILOT_STORAGE_DATABASE_URL;
+  const connectionString = process.env.XC_COPILOT_DATABASE_URL;
 
   if (!connectionString) {
-    throw new Error("XC_COPILOT_STORAGE_DATABASE_URL is not configured.");
+    throw new Error("XC_COPILOT_DATABASE_URL is not configured.");
   }
 
   const adapter = new PrismaPg({ connectionString });
