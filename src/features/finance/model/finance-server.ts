@@ -196,8 +196,21 @@ async function ensureFinancialAccounts(
   db: Prisma.TransactionClient,
   userId: string
 ) {
+  const accounts = await db.financialAccount.findMany({
+    where: { userId },
+    select: { asset: true },
+  });
+  const existingAssets = new Set(accounts.map((account) => account.asset));
+  const missingAssets = FINANCE_ASSETS.filter(
+    (asset) => !existingAssets.has(asset)
+  );
+
+  if (!missingAssets.length) {
+    return;
+  }
+
   await Promise.all(
-    FINANCE_ASSETS.map((asset) =>
+    missingAssets.map((asset) =>
       db.financialAccount.upsert({
         where: {
           userId_asset: {
