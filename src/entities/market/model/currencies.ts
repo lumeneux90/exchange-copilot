@@ -14,5 +14,7 @@ export function isActiveFxCurrencyCode(code: string) {
 }
 
 export function getCurrencyLabel(code: string) {
-  return currencyLabelMap[code.trim().toUpperCase()] ?? code.trim().toUpperCase();
+  return (
+    currencyLabelMap[code.trim().toUpperCase()] ?? code.trim().toUpperCase()
+  );
 }

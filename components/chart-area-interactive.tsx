@@ -114,7 +114,8 @@ export function ChartAreaInteractive({
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   const { isInWatchlist, tickers, toggleTicker } = useWatchlist();
-  const requestedTicker = searchParams.get("ticker")?.trim().toUpperCase() ?? "";
+  const requestedTicker =
+    searchParams.get("ticker")?.trim().toUpperCase() ?? "";
   const requestedFxCode = searchParams.get("fx")?.trim().toUpperCase() ?? "";
   const [selection, setSelection] = React.useState<InstrumentSelection>(() => {
     if (requestedFxCode && getFxInstrumentByCode(requestedFxCode)) {
@@ -263,7 +264,7 @@ export function ChartAreaInteractive({
   const selectedCurrencyRate =
     currencyRates.find((rate) => rate.code === selectedFxCode) ?? null;
   const selectedFxInstrument = selectedFxCode
-    ? getFxInstrumentByCode(selectedFxCode) ?? null
+    ? (getFxInstrumentByCode(selectedFxCode) ?? null)
     : null;
   const orderedStocks = React.useMemo(() => {
     if (!tickers.length) {
@@ -271,8 +272,12 @@ export function ChartAreaInteractive({
     }
 
     const watchlistSet = new Set(tickers);
-    const watchlistStocks = stocks.filter((stock) => watchlistSet.has(stock.ticker));
-    const otherStocks = stocks.filter((stock) => !watchlistSet.has(stock.ticker));
+    const watchlistStocks = stocks.filter((stock) =>
+      watchlistSet.has(stock.ticker)
+    );
+    const otherStocks = stocks.filter(
+      (stock) => !watchlistSet.has(stock.ticker)
+    );
 
     return [...watchlistStocks, ...otherStocks];
   }, [stocks, tickers]);
@@ -395,7 +400,9 @@ export function ChartAreaInteractive({
               >
                 <RiCheckLine
                   className={cn(
-                    selectedTicker === stock.ticker ? "opacity-100" : "opacity-0"
+                    selectedTicker === stock.ticker
+                      ? "opacity-100"
+                      : "opacity-0"
                   )}
                 />
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
@@ -418,7 +425,9 @@ export function ChartAreaInteractive({
             ))}
           </CommandGroup>
         ) : null}
-        <CommandGroup heading={watchlistStocks.length ? "Все тикеры" : "Тикеры"}>
+        <CommandGroup
+          heading={watchlistStocks.length ? "Все тикеры" : "Тикеры"}
+        >
           {otherStocks.map((stock) => (
             <CommandItem
               key={stock.ticker}
@@ -486,7 +495,10 @@ export function ChartAreaInteractive({
               />
               <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <CurrencyFlag code={rate.code} className="size-7 rounded-md" />
+                  <CurrencyFlag
+                    code={rate.code}
+                    className="size-7 rounded-md"
+                  />
                   <div className="min-w-0">
                     <div className="font-medium">{rate.label}</div>
                     <div className="text-muted-foreground truncate text-xs">
@@ -542,8 +554,8 @@ export function ChartAreaInteractive({
           <div className="min-w-0">
             <CardTitle className="text-base leading-none font-medium">
               {isFxInstrument
-                ? selectedFxInstrument?.label ?? "Валютная пара"
-                : selectedStock?.name ?? "Инструмент"}
+                ? (selectedFxInstrument?.label ?? "Валютная пара")
+                : (selectedStock?.name ?? "Инструмент")}
             </CardTitle>
             <div className="text-muted-foreground mt-1 truncate text-sm">
               {isFxInstrument
@@ -647,7 +659,9 @@ export function ChartAreaInteractive({
             <span>
               Загружаем{" "}
               {isFxInstrument ? "динамику курса ЦБ по " : "историю по "}
-              {isFxInstrument ? getCurrencyLabel(selectedFxCode) : selectedTicker}
+              {isFxInstrument
+                ? getCurrencyLabel(selectedFxCode)
+                : selectedTicker}
               ...
             </span>
           </div>
@@ -688,10 +702,7 @@ export function ChartAreaInteractive({
             config={chartConfig}
             className="aspect-auto h-[320px] w-full"
           >
-            <AreaChart
-              data={chartData}
-              margin={chartMargin}
-            >
+            <AreaChart data={chartData} margin={chartMargin}>
               <defs>
                 <linearGradient id="fillClosePrice" x1="0" y1="0" x2="0" y2="1">
                   <stop

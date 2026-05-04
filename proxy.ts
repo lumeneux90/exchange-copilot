@@ -5,7 +5,7 @@ import { SESSION_COOKIE_NAME } from "@/src/lib/auth-config";
 
 const AUTH_ROUTE = "/login";
 const DEFAULT_PRIVATE_ROUTE = "/";
-const PRIVATE_ROUTES = ["/", "/portfolio", "/history"];
+const PRIVATE_ROUTES = ["/", "/portfolio", "/history", "/finances"];
 
 function isPrivateRoute(pathname: string) {
   return PRIVATE_ROUTES.some((route) =>
@@ -29,5 +29,11 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/portfolio/:path*", "/history/:path*"],
+  matcher: [
+    "/",
+    "/login",
+    "/portfolio/:path*",
+    "/history/:path*",
+    "/finances/:path*",
+  ],
 };

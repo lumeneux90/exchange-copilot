@@ -20,6 +20,7 @@ export function NavMain({
     url: string;
     matchUrl?: string;
     icon?: React.ReactNode;
+    endContent?: React.ReactNode;
   }[];
 }) {
   const pathname = usePathname();
@@ -38,6 +39,9 @@ export function NavMain({
               >
                 {item.icon}
                 <span>{item.title}</span>
+                {item.endContent ? (
+                  <span className="ml-auto">{item.endContent}</span>
+                ) : null}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}

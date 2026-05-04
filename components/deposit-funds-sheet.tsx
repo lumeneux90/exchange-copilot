@@ -93,9 +93,7 @@ export function DepositFundsSheet({
       <SheetContent
         side={side}
         className={
-          side === "bottom"
-            ? "max-h-[100dvh]"
-            : "h-[100dvh] sm:max-w-md"
+          side === "bottom" ? "max-h-[100dvh]" : "h-[100dvh] sm:max-w-md"
         }
       >
         <SheetHeader>

@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { RiArrowRightUpLine } from "@remixicon/react";
+import { RiBankCardLine } from "@remixicon/react";
 
 import { DepositFundsSheet } from "@/components/deposit-funds-sheet";
 import { Button } from "@/components/ui/button";
@@ -15,11 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-} from "@/components/ui/sidebar";
+import { SidebarGroup, SidebarGroupContent } from "@/components/ui/sidebar";
 import {
   buildPortfolioSnapshot,
   usePortfolio,
@@ -139,7 +134,6 @@ export function SidebarPortfolioCard({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Портфель</SidebarGroupLabel>
       <SidebarGroupContent>
         <Card className="bg-sidebar-accent/30 gap-3 border py-3">
           <CardHeader className="gap-1">
@@ -227,18 +221,19 @@ export function SidebarPortfolioCard({
             </div>
           </CardContent>
           <CardFooter className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              className="w-full"
-              render={<Link href="/portfolio" />}
-            >
-              <RiArrowRightUpLine />
-              Перейти
-            </Button>
             <DepositFundsSheet
               triggerLabel="Пополнить"
               triggerClassName="w-full"
             />
+            <Button
+              variant="destructive"
+              className="w-full"
+              type="button"
+              disabled
+            >
+              <RiBankCardLine />
+              Вывести
+            </Button>
           </CardFooter>
         </Card>
       </SidebarGroupContent>

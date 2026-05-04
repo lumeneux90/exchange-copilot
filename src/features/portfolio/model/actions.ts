@@ -152,7 +152,10 @@ export async function tradeStockAction(params: {
 }) {
   try {
     const userId = await requireCurrentUserId();
-    const price = await getExecutionStockPrice(params.ticker, params.quotedPrice);
+    const price = await getExecutionStockPrice(
+      params.ticker,
+      params.quotedPrice
+    );
     const portfolio = await tradeStock({
       userId,
       price,

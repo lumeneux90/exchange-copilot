@@ -292,7 +292,7 @@ function UserLeaderboardCarousel({
               key={item.userId}
               className="pl-3 sm:basis-1/2 xl:basis-1/3"
             >
-              <div className="flex h-full min-w-0 flex-col gap-4 rounded-xl border bg-background/40 p-4">
+              <div className="bg-background/40 flex h-full min-w-0 flex-col gap-4 rounded-xl border p-4">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar size="lg">

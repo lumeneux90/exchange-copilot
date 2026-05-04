@@ -13,7 +13,9 @@ function getMoscowDateParts(date: Date) {
   const parts = formatter.formatToParts(date);
   const weekday = parts.find((part) => part.type === "weekday")?.value ?? "Mon";
   const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
-  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+  const minute = Number(
+    parts.find((part) => part.type === "minute")?.value ?? 0
+  );
 
   return {
     weekday,
@@ -31,7 +33,8 @@ export function getStockMarketStatus(date = new Date()) {
   if (!isWeekday) {
     return {
       isOpen: false,
-      reason: "Сделки по акциям доступны только по будням с 09:50 до 19:00 по Москве.",
+      reason:
+        "Сделки по акциям доступны только по будням с 09:50 до 19:00 по Москве.",
     };
   }
 

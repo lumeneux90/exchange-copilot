@@ -18,11 +18,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  RiBankCardLine,
-  RiLogoutBoxLine,
-  RiMore2Line,
-} from "@remixicon/react";
+import { RiBankCardLine, RiLogoutBoxLine, RiMore2Line } from "@remixicon/react";
 import { getUserInitials } from "@/src/lib/user";
 
 export function NavUser({

@@ -1,10 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import {
-  deleteSession,
-  getSessionCookieOptions,
-} from "@/src/lib/auth";
+import { deleteSession, getSessionCookieOptions } from "@/src/lib/auth";
 import { SESSION_COOKIE_NAME } from "@/src/lib/auth-config";
 
 export async function POST() {

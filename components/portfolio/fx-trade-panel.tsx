@@ -198,7 +198,10 @@ export function FxTradePanel({
                   {rubFormatter.format(item.price)}
                 </div>
                 <div
-                  className={cn("text-xs font-medium tabular-nums", directionClass)}
+                  className={cn(
+                    "text-xs font-medium tabular-nums",
+                    directionClass
+                  )}
                 >
                   {formatPercent(item.changePercent)}
                 </div>
@@ -221,7 +224,7 @@ export function FxTradePanel({
             <Button
               type="button"
               variant="ghost"
-              className="h-auto min-w-0 w-full justify-start whitespace-normal rounded-md px-3 py-3 text-left"
+              className="h-auto w-full min-w-0 justify-start rounded-md px-3 py-3 text-left whitespace-normal"
             >
               <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
                 <span className="text-sm font-medium">Быстрый обмен</span>
@@ -327,7 +330,7 @@ export function FxTradePanel({
                   ? side === "buy"
                     ? `${formatFxAmount(fxQuantity)} ${selectedCode}`
                     : rubFormatter.format(sellNetAmount)
-                : "—"}
+                  : "—"}
               </span>
             </div>
             <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border px-3 py-2">

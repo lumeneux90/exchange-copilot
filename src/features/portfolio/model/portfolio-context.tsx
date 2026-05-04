@@ -10,6 +10,7 @@ import {
   tradeCurrencyAction,
   tradeStockAction,
 } from "@/src/features/portfolio/model/actions";
+import { notifyFinanceRefresh } from "@/src/features/finance/model/finance-context";
 import {
   emptyPortfolioState,
   type PortfolioCurrencyBalance,
@@ -181,7 +182,7 @@ export function PortfolioProvider({
   );
   const [isPending, setIsPending] = React.useState(false);
   const loadedPortfolioUserIdRef = React.useRef<string | null>(
-    initialPortfolio && currentUser ? currentUser.id : currentUser ? null : "__guest__"
+    initialPortfolio ? (currentUser?.id ?? null) : null
   );
 
   const refreshPortfolio = React.useCallback(async () => {
@@ -210,6 +211,7 @@ export function PortfolioProvider({
       }
 
       setPortfolio(result.portfolio);
+      notifyFinanceRefresh();
     } finally {
       setIsPending(false);
     }
@@ -252,6 +254,7 @@ export function PortfolioProvider({
         }
 
         setPortfolio(result.portfolio);
+        notifyFinanceRefresh();
       } finally {
         setIsPending(false);
       }
@@ -297,6 +300,7 @@ export function PortfolioProvider({
         }
 
         setPortfolio(result.portfolio);
+        notifyFinanceRefresh();
       } finally {
         setIsPending(false);
       }
@@ -326,13 +330,13 @@ export function PortfolioProvider({
   React.useEffect(() => {
     if (initialPortfolio) {
       setPortfolio(initialPortfolio);
-      loadedPortfolioUserIdRef.current = currentUser?.id ?? "__guest__";
+      loadedPortfolioUserIdRef.current = currentUser?.id ?? null;
       return;
     }
 
     if (!currentUser) {
       setPortfolio(emptyPortfolioState());
-      loadedPortfolioUserIdRef.current = "__guest__";
+      loadedPortfolioUserIdRef.current = null;
       return;
     }
 

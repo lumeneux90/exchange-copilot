@@ -7,12 +7,15 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  login        String     @unique
-  passwordHash String     @map("password_hash")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  sessions     Session[]
-  portfolio    Portfolio?
+  id                      String             @id @default(cuid())
+  login                   String             @unique
+  passwordHash            String             @map("password_hash")
+  createdAt               DateTime           @default(now()) @map("created_at")
+  sessions                Session[]
+  portfolio               Portfolio?
+  financialAccounts       FinancialAccount[]
+  createdFinancialOrders  FinancialOrder[]   @relation("FinancialOrdersCreated")
+  acceptedFinancialOrders FinancialOrder[]   @relation("FinancialOrdersAccepted")
 
   @@map("users")
 }
@@ -68,10 +71,10 @@ model PortfolioPosition {
   updatedAt    DateTime              @updatedAt @map("updated_at")
   portfolio    Portfolio             @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
-  @@index([portfolioId])
-  @@index([portfolioId, type])
   @@unique([portfolioId, ticker])
   @@unique([portfolioId, currencyCode])
+  @@index([portfolioId])
+  @@index([portfolioId, type])
   @@map("portfolio_positions")
 }
 
@@ -92,4 +95,48 @@ model PortfolioTransaction {
   @@index([portfolioId, executedAt(sort: Desc)])
   @@index([portfolioId, type, executedAt(sort: Desc)])
   @@map("portfolio_transactions")
+}
+
+enum FinancialAsset {
+  RUB
+  USD
+  XCP
+}
+
+enum FinancialOrderStatus {
+  OPEN
+  ACCEPTED
+  CANCELLED
+}
+
+model FinancialAccount {
+  id        String         @id @default(cuid())
+  userId    String         @map("user_id")
+  asset     FinancialAsset
+  balance   Decimal        @default(0) @db.Decimal(20, 8)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, asset])
+  @@map("financial_accounts")
+}
+
+model FinancialOrder {
+  id               String               @id @default(cuid())
+  creatorUserId    String               @map("creator_user_id")
+  acceptedByUserId String?              @map("accepted_by_user_id")
+  asset            FinancialAsset
+  amount           Decimal              @db.Decimal(20, 8)
+  status           FinancialOrderStatus @default(OPEN)
+  acceptedAt       DateTime?            @map("accepted_at")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  creator          User                 @relation("FinancialOrdersCreated", fields: [creatorUserId], references: [id], onDelete: Cascade)
+  acceptedBy       User?                @relation("FinancialOrdersAccepted", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([creatorUserId, createdAt(sort: Desc)])
+  @@index([acceptedByUserId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("financial_orders")
 }
