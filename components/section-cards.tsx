@@ -95,7 +95,7 @@ function getTrendBadgeStyle(
 ): React.CSSProperties | undefined {
   switch (direction) {
     case "positive":
-      return { color: "var(--primary)" };
+      return { color: "var(--chart-2)" };
     case "negative":
       return { color: "var(--destructive)" };
     default:
@@ -218,7 +218,7 @@ function MarketTopList({
                 <div
                   className={cn(
                     "text-sm font-medium tabular-nums sm:hidden",
-                    direction === "positive" && "text-primary",
+                    direction === "positive" && "text-chart-2",
                     direction === "negative" && "text-destructive",
                     direction === "neutral" && "text-muted-foreground"
                   )}
@@ -236,7 +236,7 @@ function MarketTopList({
                 <div
                   className={cn(
                     "text-sm font-medium tabular-nums",
-                    direction === "positive" && "text-primary",
+                    direction === "positive" && "text-chart-2",
                     direction === "negative" && "text-destructive",
                     direction === "neutral" && "text-muted-foreground"
                   )}
@@ -252,7 +252,7 @@ function MarketTopList({
                 <div
                   className={cn(
                     "text-sm font-medium tabular-nums",
-                    direction === "positive" && "text-primary",
+                    direction === "positive" && "text-chart-2",
                     direction === "negative" && "text-destructive",
                     direction === "neutral" && "text-muted-foreground"
                   )}
@@ -323,7 +323,7 @@ function UserLeaderboardCarousel({
                     <div
                       className={cn(
                         "text-xl font-semibold tabular-nums",
-                        direction === "positive" && "text-primary",
+                        direction === "positive" && "text-chart-2",
                         direction === "negative" && "text-destructive",
                         direction === "neutral" && "text-muted-foreground"
                       )}
@@ -338,7 +338,7 @@ function UserLeaderboardCarousel({
                       <div
                         className={cn(
                           "font-medium tabular-nums",
-                          direction === "positive" && "text-primary",
+                          direction === "positive" && "text-chart-2",
                           direction === "negative" && "text-destructive",
                           direction === "neutral" && "text-muted-foreground"
                         )}
@@ -387,7 +387,7 @@ export function SectionCards({
   }
 
   return (
-    <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2">
+    <div className="*:data-[slot=card]:ring-border/60 grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2">
       <Card className="@container/card @xl/main:col-span-2">
         <CardHeader>
           <CardTitle className="text-lg font-semibold tabular-nums @[250px]/card:text-xl">

@@ -56,7 +56,7 @@ function getAmountLabel(side: "buy" | "sell", code: string) {
 
 function getTrendTone(value: number) {
   if (value > 0) {
-    return "text-primary";
+    return "text-chart-2";
   }
 
   if (value < 0) {

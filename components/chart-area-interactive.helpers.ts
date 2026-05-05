@@ -27,7 +27,7 @@ export const rangeLabels: Record<CandleRange, string> = {
 export const chartConfig = {
   close: {
     label: "Цена",
-    color: "var(--primary)",
+    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
@@ -80,7 +80,7 @@ export function getRangeChange(candles: CandleResponseItem[]) {
 
 export function getRangeChangeClass(value: number) {
   if (value > 0) {
-    return "text-primary";
+    return "text-chart-2";
   }
 
   if (value < 0) {

@@ -5,7 +5,11 @@ import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PwaRegistration } from "@/src/features/pwa/ui/pwa-registration";
+import { cn } from "@/src/lib/utils";
 import { getCurrentUser } from "@/src/lib/session";
+import { Geist } from "next/font/google";
+
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Xchange Copilot",
@@ -23,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d7a43",
+  themeColor: "#123246",
   colorScheme: "light dark",
 };
 
@@ -38,7 +42,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html
       lang="ru"
       suppressHydrationWarning
-      className="font-sans"
+      className={cn("font-sans", geist.variable)}
       style={
         {
           "--font-sans":

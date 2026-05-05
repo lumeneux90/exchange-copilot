@@ -109,11 +109,11 @@ function getCashMovement(item: PortfolioHistoryItem) {
 
 function getCashMovementTone(value: number) {
   if (value > 0) {
-    return "text-emerald-600 dark:text-emerald-400";
+    return "text-chart-2";
   }
 
   if (value < 0) {
-    return "text-red-600 dark:text-red-400";
+    return "text-destructive";
   }
 
   return "text-muted-foreground";
