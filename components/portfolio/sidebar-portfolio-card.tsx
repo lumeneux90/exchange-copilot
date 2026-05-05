@@ -40,7 +40,7 @@ const allocationChartConfig = {
   },
   fx: {
     label: "Валюта",
-    color: "#f59e0b",
+    color: "var(--chart-3)",
   },
 } satisfies ChartConfig;
 
@@ -55,9 +55,9 @@ export function SidebarPortfolioCard({
   const snapshot = buildPortfolioSnapshot(portfolio, stocks, currencyRates);
   const portfolioTrendTone =
     snapshot.totalProfitLoss > 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-chart-2"
       : snapshot.totalProfitLoss < 0
-        ? "text-red-600 dark:text-red-400"
+        ? "text-destructive"
         : "text-muted-foreground";
   const totalValue = snapshot.totalValue || 0;
   const segmentValues = {
@@ -117,7 +117,7 @@ export function SidebarPortfolioCard({
     },
     {
       chartKey: "fx",
-      color: "bg-amber-500",
+      color: "bg-chart-3",
       label: "Валюта",
       share: totalValue > 0 ? snapshot.currenciesMarketValue / totalValue : 0,
       value: snapshot.currenciesMarketValue,

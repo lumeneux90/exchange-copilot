@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/src/features/theme/ui/theme-toggle";
 export default function LoginPage() {
   return (
     <main className="bg-background relative min-h-svh overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.12),transparent_30%),linear-gradient(180deg,rgba(245,247,245,0.95)_0%,transparent_40%)] dark:bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.14),transparent_28%),linear-gradient(180deg,rgba(12,18,14,0.85)_0%,transparent_38%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,color-mix(in_oklab,var(--primary)_24%,transparent),transparent_42%),radial-gradient(circle_at_82%_16%,color-mix(in_oklab,var(--chart-2)_14%,transparent),transparent_48%),linear-gradient(180deg,color-mix(in_oklab,var(--primary)_10%,var(--background))_0%,var(--background)_72%)] dark:bg-[radial-gradient(circle_at_18%_0%,color-mix(in_oklab,var(--sidebar-primary)_26%,transparent),transparent_44%),radial-gradient(circle_at_82%_18%,color-mix(in_oklab,var(--chart-2)_16%,transparent),transparent_50%),linear-gradient(180deg,color-mix(in_oklab,var(--primary)_18%,var(--background))_0%,var(--background)_78%)]" />
       <div className="relative z-10 flex justify-end px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pr-[calc(env(safe-area-inset-right)+1rem)] sm:px-6 md:absolute md:top-8 md:right-8 md:px-0 md:pt-0 md:pr-0">
         <ThemeToggle />
       </div>

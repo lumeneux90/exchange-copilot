@@ -3,22 +3,9 @@
 import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { RiBankCardLine, RiLogoutBoxLine, RiMore2Line } from "@remixicon/react";
+import { Button } from "@/components/ui/button";
+import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
+import { RiLogoutBoxLine } from "@remixicon/react";
 import { getUserInitials } from "@/src/lib/user";
 
 export function NavUser({
@@ -30,7 +17,6 @@ export function NavUser({
   };
 }) {
   const router = useRouter();
-  const { isMobile } = useSidebar();
   const initials = getUserInitials(user.login);
 
   async function handleLogout() {
@@ -45,64 +31,30 @@ export function NavUser({
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
-            }
+        <div className="border-sidebar-border/80 bg-sidebar-accent/35 flex min-w-0 items-center gap-2 rounded-lg border p-2">
+          <Avatar className="size-8 rounded-lg">
+            <AvatarImage src="" alt={user.login} />
+            <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-medium">{user.login}</span>
+            <span className="text-muted-foreground flex items-center gap-1.5 truncate text-xs">
+              <span className="bg-chart-2 size-1.5 rounded-full" />
+              {user.statusLabel}
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="size-8 shrink-0"
+            aria-label="Выйти"
+            title="Выйти"
+            onClick={handleLogout}
           >
-            <Avatar className="size-8 rounded-lg grayscale">
-              <AvatarImage src="" alt={user.login} />
-              <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-            </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.login}</span>
-              <span className="text-primary truncate text-xs font-medium">
-                {user.statusLabel}
-              </span>
-            </div>
-            <RiMore2Line className="ml-auto size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="min-w-56"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
-          >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar className="size-8">
-                    <AvatarImage src="" alt={user.login} />
-                    <AvatarFallback className="rounded-lg">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.login}</span>
-                    <span className="text-primary truncate text-xs font-medium">
-                      {user.statusLabel}
-                    </span>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
-              <RiBankCardLine />
-              Billing
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              className="hover:text-destructive data-highlighted:text-destructive focus:text-destructive [&_svg]:text-destructive data-highlighted:[&_svg]:text-destructive focus:[&_svg]:text-destructive"
-              onClick={handleLogout}
-            >
-              <RiLogoutBoxLine />
-              Выйти
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <RiLogoutBoxLine />
+          </Button>
+        </div>
       </SidebarMenuItem>
     </SidebarMenu>
   );

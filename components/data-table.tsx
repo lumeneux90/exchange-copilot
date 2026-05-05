@@ -38,7 +38,7 @@ function formatPercent(value: number) {
 
 function getChangeColorClass(value: number) {
   if (value > 0) {
-    return "text-primary";
+    return "text-chart-2";
   }
 
   if (value < 0) {

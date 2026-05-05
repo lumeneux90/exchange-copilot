@@ -20,9 +20,9 @@ function getAccountTitle(asset: FinanceAsset) {
 function getAccountCardTheme(asset: FinanceAsset) {
   switch (asset) {
     case "RUB":
-      return "border-emerald-200/35 bg-[linear-gradient(135deg,#052e2b_0%,#0f766e_48%,#f6b44b_130%)] text-white";
+      return "border-sidebar-primary/35 bg-[linear-gradient(135deg,#07131f_0%,color-mix(in_oklab,var(--primary)_58%,#123246)_55%,color-mix(in_oklab,var(--chart-3)_24%,#4f5965)_132%)] text-white";
     case "USD":
-      return "border-sky-200/35 bg-[linear-gradient(135deg,#111827_0%,#1d4ed8_54%,#94a3b8_130%)] text-white";
+      return "border-orange-200/30 bg-[linear-gradient(135deg,#4a2f2a_0%,#9a5f42_52%,#d2b58c_132%)] text-white";
     case "XCP":
       return "border-violet-200/35 bg-[linear-gradient(135deg,#18181b_0%,#7c3aed_55%,#22c55e_135%)] text-white";
   }
@@ -53,11 +53,12 @@ export function AccountCard({ account }: { account: FinancialAccountItem }) {
         </div>
 
         <div className="flex min-w-0 items-center gap-4">
-          <div className="grid h-9 w-12 shrink-0 grid-cols-2 gap-px overflow-hidden rounded-lg border border-white/40 bg-white/25 p-1.5 shadow-sm sm:h-10 sm:w-14">
-            <span className="rounded-sm bg-white/55" />
-            <span className="rounded-sm bg-white/20" />
-            <span className="rounded-sm bg-white/20" />
-            <span className="rounded-sm bg-white/45" />
+          <div className="relative grid h-9 w-12 shrink-0 grid-cols-2 gap-px overflow-hidden rounded-lg border border-white/35 bg-[linear-gradient(135deg,#f3d98c_0%,#9f8653_52%,#f8e6a8_100%)] p-1.5 shadow-sm ring-1 ring-black/10 sm:h-10 sm:w-14">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,.5),transparent_34%),linear-gradient(90deg,rgba(76,55,24,.28)_1px,transparent_1px),linear-gradient(0deg,rgba(76,55,24,.24)_1px,transparent_1px)] [background-size:100%_100%,14px_14px,14px_14px]" />
+            <span className="relative rounded-sm border border-amber-950/20 bg-amber-100/45" />
+            <span className="relative rounded-sm border border-amber-950/20 bg-yellow-200/30" />
+            <span className="relative rounded-sm border border-amber-950/20 bg-yellow-200/25" />
+            <span className="relative rounded-sm border border-amber-950/20 bg-amber-100/40" />
           </div>
           <div className="min-w-0 truncate font-mono text-base font-medium tracking-normal text-white sm:text-lg">
             {account.card.maskedNumber}

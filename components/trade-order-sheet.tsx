@@ -31,6 +31,7 @@ import {
   parseDecimalInput,
   rubFormatter,
 } from "@/src/lib/money";
+import { cn } from "@/src/lib/utils";
 
 type TradeSide = "buy" | "sell";
 type StockInputMode = "quantity" | "amount";
@@ -55,6 +56,18 @@ function formatEditableDecimal(value: number, maximumFractionDigits = 2) {
   }
 
   return value.toFixed(maximumFractionDigits).replace(/\.?0+$/, "");
+}
+
+function getTrendTone(value: number) {
+  if (value > 0) {
+    return "text-chart-2";
+  }
+
+  if (value < 0) {
+    return "text-destructive";
+  }
+
+  return "text-muted-foreground";
 }
 
 export function TradeOrderSheet({
@@ -449,7 +462,12 @@ export function TradeOrderSheet({
                   <span className="text-muted-foreground">
                     Результат позиции
                   </span>
-                  <span>
+                  <span
+                    className={cn(
+                      selectedHolding &&
+                        getTrendTone(selectedHolding.profitLossPercent)
+                    )}
+                  >
                     {selectedHolding
                       ? formatSignedPercent(selectedHolding.profitLossPercent)
                       : "0.00%"}

@@ -155,7 +155,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           >
             <FieldGroup className="gap-5">
               <div className="flex flex-col gap-4 text-left">
-                <div className="text-primary flex items-center gap-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+                <div className="text-primary dark:text-sidebar-primary flex items-center gap-3 text-2xl font-semibold tracking-tight sm:text-3xl">
                   <RiCommandLine className="size-8 sm:size-9" />
                   Xchange Copilot
                 </div>
@@ -280,8 +280,8 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           </form>
 
           <div className="border-border/60 bg-muted/50 relative hidden overflow-hidden border-l lg:block">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.18),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.16),transparent_42%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,rgba(255,255,255,0.5)_100%)] dark:bg-[linear-gradient(135deg,transparent_0%,rgba(255,255,255,0.03)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,color-mix(in_oklab,var(--primary)_28%,transparent),transparent_40%),radial-gradient(circle_at_bottom_right,color-mix(in_oklab,var(--chart-2)_18%,transparent),transparent_44%)] dark:bg-[radial-gradient(circle_at_top_left,color-mix(in_oklab,var(--sidebar-primary)_28%,transparent),transparent_42%),radial-gradient(circle_at_bottom_right,color-mix(in_oklab,var(--chart-2)_16%,transparent),transparent_46%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,color-mix(in_oklab,var(--background)_70%,transparent)_100%)] dark:bg-[linear-gradient(135deg,transparent_0%,color-mix(in_oklab,var(--background)_18%,transparent)_100%)]" />
             <div className="relative flex h-full flex-col p-10">
               <div className="space-y-8">
                 <div className="space-y-3">
@@ -298,7 +298,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
                         className="border-border/60 bg-background/80 rounded-2xl shadow-sm backdrop-blur"
                       >
                         <CardHeader className="gap-3">
-                          <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-xl">
+                          <div className="bg-primary/10 text-primary dark:bg-sidebar-primary/10 dark:text-sidebar-primary flex size-10 items-center justify-center rounded-xl">
                             <Icon />
                           </div>
                           <div className="space-y-1">

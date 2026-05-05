@@ -58,6 +58,7 @@ export function OrderActionButtons({
       <div className="flex justify-end">
         <Button
           size="sm"
+          className="bg-chart-3 text-primary-foreground hover:bg-chart-1/80"
           onClick={() => runAction("accept")}
           disabled={pendingAction !== null}
         >
@@ -76,7 +77,7 @@ export function OrderActionButtons({
           onClick={() => runAction("cancel")}
           disabled={pendingAction !== null}
         >
-          Отменить заявку
+          Отменить
         </Button>
       </div>
     );

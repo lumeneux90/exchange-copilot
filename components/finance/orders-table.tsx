@@ -38,7 +38,6 @@ import type {
   FinanceState,
   FinancialOrderItem,
 } from "@/src/features/finance/model/types";
-import { cn } from "@/src/lib/utils";
 
 export function OrdersTable({
   emptyIcon,
@@ -118,13 +117,19 @@ export function OrdersTable({
                     #{formatOrderId(order.id)}
                   </span>
                 </TableCell>
-                <TableCell
-                  className={cn(
-                    "font-medium",
-                    order.relation === "own" && "text-primary"
-                  )}
-                >
-                  {order.creatorLogin}
+                <TableCell>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium">
+                      {order.creatorLogin}
+                    </span>
+                    {order.relation === "own" ? (
+                      <span
+                        className="bg-chart-3 inline-flex size-2 rounded-full"
+                        aria-label="Моя заявка"
+                        title="Моя заявка"
+                      />
+                    ) : null}
+                  </div>
                 </TableCell>
                 <TableCell className="font-medium tabular-nums">
                   {formatAssetAmount(order.amount, order.asset)}
