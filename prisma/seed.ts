@@ -56,7 +56,7 @@ const counterpartyFinancialAccountSeeds = [
   },
   {
     asset: "XCP",
-    balance: 500,
+    balance: 300,
   },
 ] satisfies FinancialAccountSeed[];
 
