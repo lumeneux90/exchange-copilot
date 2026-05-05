@@ -39,10 +39,18 @@ enum PortfolioPositionType {
 
 enum PortfolioTransactionType {
   DEPOSIT
+  WITHDRAWAL
   BUY
   SELL
   FX_BUY
   FX_SELL
+}
+
+enum BrokerageCurrency {
+  RUB
+  USD
+  EUR
+  CNY
 }
 
 model Portfolio {
@@ -52,10 +60,26 @@ model Portfolio {
   createdAt    DateTime               @default(now()) @map("created_at")
   updatedAt    DateTime               @updatedAt @map("updated_at")
   user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cashBalances BrokerageCashBalance[]
   positions    PortfolioPosition[]
   transactions PortfolioTransaction[]
 
   @@map("portfolios")
+}
+
+model BrokerageCashBalance {
+  id          String            @id @default(cuid())
+  portfolioId String            @map("portfolio_id")
+  currency    BrokerageCurrency
+  balance     Decimal           @default(0) @db.Decimal(20, 8)
+  averageRate Decimal?          @map("average_rate") @db.Decimal(20, 8)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  portfolio   Portfolio         @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, currency])
+  @@index([portfolioId])
+  @@map("brokerage_cash_balances")
 }
 
 model PortfolioPosition {

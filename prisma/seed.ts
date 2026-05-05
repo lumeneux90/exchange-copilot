@@ -24,33 +24,39 @@ type FinancialAccountSeed = {
   balance: number;
 };
 
+type BrokerageCashBalanceSeed = {
+  averageRate: number | null;
+  balance: number;
+  currency: "RUB" | "USD" | "EUR" | "CNY";
+};
+
 const financialAccountSeeds = [
   {
     asset: "RUB",
-    balance: 125_000,
+    balance: 300_000,
   },
   {
     asset: "USD",
-    balance: 1_250,
+    balance: 3_000,
   },
   {
     asset: "XCP",
-    balance: 350,
+    balance: 500,
   },
 ] satisfies FinancialAccountSeed[];
 
 const counterpartyFinancialAccountSeeds = [
   {
     asset: "RUB",
-    balance: 72_500,
+    balance: 300_000,
   },
   {
     asset: "USD",
-    balance: 640,
+    balance: 3_000,
   },
   {
     asset: "XCP",
-    balance: 180,
+    balance: 500,
   },
 ] satisfies FinancialAccountSeed[];
 
@@ -169,6 +175,9 @@ async function main() {
   });
 
   await prisma.$transaction([
+    prisma.brokerageCashBalance.deleteMany({
+      where: { portfolioId: portfolio.id },
+    }),
     prisma.portfolioPosition.deleteMany({
       where: { portfolioId: portfolio.id },
     }),
@@ -205,25 +214,25 @@ async function main() {
       averagePrice: decimal(672.8),
       averageRate: null,
     },
-    {
-      portfolioId: portfolio.id,
-      type: "CURRENCY",
-      ticker: null,
-      currencyCode: "USD",
-      quantity: decimal(320),
-      averagePrice: null,
-      averageRate: decimal(91.4),
-    },
-    {
-      portfolioId: portfolio.id,
-      type: "CURRENCY",
-      ticker: null,
-      currencyCode: "CNY",
-      quantity: decimal(1800),
-      averagePrice: null,
-      averageRate: decimal(12.55),
-    },
   ] satisfies Prisma.PortfolioPositionCreateManyInput[];
+
+  const brokerageCashBalanceSeeds = [
+    {
+      currency: "RUB",
+      balance: 154486.8,
+      averageRate: 1,
+    },
+    {
+      currency: "USD",
+      balance: 320,
+      averageRate: 91.4,
+    },
+    {
+      currency: "CNY",
+      balance: 1800,
+      averageRate: 12.55,
+    },
+  ] satisfies BrokerageCashBalanceSeed[];
 
   const transactionSeeds = [
     {
@@ -307,6 +316,18 @@ async function main() {
 
   await prisma.portfolioPosition.createMany({
     data: positionSeeds,
+  });
+
+  await prisma.brokerageCashBalance.createMany({
+    data: brokerageCashBalanceSeeds.map((cashBalance) => ({
+      portfolioId: portfolio.id,
+      currency: cashBalance.currency,
+      balance: decimal(cashBalance.balance),
+      averageRate:
+        cashBalance.averageRate == null
+          ? null
+          : decimal(cashBalance.averageRate),
+    })),
   });
 
   await prisma.portfolioTransaction.createMany({

@@ -17,10 +17,6 @@ const currencyFlagMap: Record<string, { alt: string; src: string }> = {
     alt: "Флаг Китая",
     src: "/flags/cn-round.svg",
   },
-  HKD: {
-    alt: "Флаг Гонконга",
-    src: "/flags/hk-round.svg",
-  },
 };
 
 export function CurrencyFlag({

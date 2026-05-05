@@ -10,6 +10,8 @@ export type PortfolioCurrencyBalance = {
   averageRate: number;
 };
 
+export type PortfolioTransferCurrency = "RUB" | "USD";
+
 export type PortfolioState = {
   cashBalance: number;
   currencies: PortfolioCurrencyBalance[];

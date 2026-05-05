@@ -5,12 +5,16 @@ import {
   getPortfolioState,
   tradeCurrency,
   tradeStock,
+  withdrawFunds,
 } from "@/src/features/portfolio/model/portfolio-server";
 import { getCurrencyRates } from "@/src/entities/market/api/get-currency-rates";
 import { getStocks } from "@/src/entities/stock/api/get-stocks";
 import { getErrorMessage } from "@/src/lib/errors";
 import { getCurrentUser } from "@/src/lib/session";
-import type { PortfolioState } from "@/src/features/portfolio/model/types";
+import type {
+  PortfolioState,
+  PortfolioTransferCurrency,
+} from "@/src/features/portfolio/model/types";
 
 const MAX_QUOTE_DEVIATION = 0.005;
 const SERVER_STOCK_LOOKUP_LIMIT = 500;
@@ -64,7 +68,7 @@ async function getExecutionStockPrice(ticker: string, quotedPrice: number) {
   return stock.price;
 }
 
-async function getExecutionCurrencyRate(code: string, quotedRate: number) {
+async function getCurrentCurrencyRate(code: string) {
   const normalizedCode = code.trim().toUpperCase();
   const currencyRates = await getCurrencyRates();
   const currencyRate = currencyRates.find(
@@ -77,12 +81,18 @@ async function getExecutionCurrencyRate(code: string, quotedRate: number) {
     throw new Error("Не удалось получить актуальный курс валюты.");
   }
 
+  return currencyRate.price;
+}
+
+async function getExecutionCurrencyRate(code: string, quotedRate: number) {
+  const price = await getCurrentCurrencyRate(code);
+
   assertQuoteWithinTolerance({
-    executionValue: currencyRate.price,
+    executionValue: price,
     quotedValue: quotedRate,
   });
 
-  return currencyRate.price;
+  return price;
 }
 
 export async function getPortfolioStateAction() {
@@ -95,12 +105,19 @@ type PortfolioActionResult =
   | { ok: true; portfolio: PortfolioState }
   | { ok: false; error: string };
 
-export async function depositFundsAction(amount: number) {
+export async function depositFundsAction(
+  amount: number,
+  currency: PortfolioTransferCurrency = "RUB"
+) {
   try {
     const userId = await requireCurrentUserId();
+    const rate =
+      currency === "RUB" ? 1 : await getCurrentCurrencyRate(currency);
     const portfolio = await depositFunds({
       userId,
       amount,
+      currency,
+      rate,
     });
 
     return {
@@ -111,6 +128,30 @@ export async function depositFundsAction(amount: number) {
     return {
       ok: false,
       error: getErrorMessage(error, "Не удалось пополнить счет."),
+    } satisfies PortfolioActionResult;
+  }
+}
+
+export async function withdrawFundsAction(
+  amount: number,
+  currency: PortfolioTransferCurrency = "RUB"
+) {
+  try {
+    const userId = await requireCurrentUserId();
+    const portfolio = await withdrawFunds({
+      userId,
+      amount,
+      currency,
+    });
+
+    return {
+      ok: true,
+      portfolio,
+    } satisfies PortfolioActionResult;
+  } catch (error) {
+    return {
+      ok: false,
+      error: getErrorMessage(error, "Не удалось вывести средства."),
     } satisfies PortfolioActionResult;
   }
 }

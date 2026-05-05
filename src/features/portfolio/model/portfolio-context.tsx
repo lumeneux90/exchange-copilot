@@ -9,6 +9,7 @@ import {
   getPortfolioStateAction,
   tradeCurrencyAction,
   tradeStockAction,
+  withdrawFundsAction,
 } from "@/src/features/portfolio/model/actions";
 import { notifyFinanceRefresh } from "@/src/features/finance/model/finance-context";
 import {
@@ -16,13 +17,21 @@ import {
   type PortfolioCurrencyBalance,
   type PortfolioHolding,
   type PortfolioState,
+  type PortfolioTransferCurrency,
 } from "@/src/features/portfolio/model/types";
 
 type PortfolioContextValue = {
   portfolio: PortfolioState;
   isPending: boolean;
   refreshPortfolio: () => Promise<void>;
-  depositFunds: (amount: number) => Promise<void>;
+  depositFunds: (
+    amount: number,
+    currency?: PortfolioTransferCurrency
+  ) => Promise<void>;
+  withdrawFunds: (
+    amount: number,
+    currency?: PortfolioTransferCurrency
+  ) => Promise<void>;
   tradeCurrency: (params: {
     code: string;
     side: "buy" | "sell";
@@ -196,26 +205,53 @@ export function PortfolioProvider({
     }
   }, []);
 
-  const depositFunds = React.useCallback(async (amount: number) => {
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new Error("Введите корректную сумму пополнения.");
-    }
-
-    setIsPending(true);
-
-    try {
-      const result = await depositFundsAction(amount);
-
-      if (!result.ok) {
-        throw new Error(result.error);
+  const depositFunds = React.useCallback(
+    async (amount: number, currency: PortfolioTransferCurrency = "RUB") => {
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error("Введите корректную сумму пополнения.");
       }
 
-      setPortfolio(result.portfolio);
-      notifyFinanceRefresh();
-    } finally {
-      setIsPending(false);
-    }
-  }, []);
+      setIsPending(true);
+
+      try {
+        const result = await depositFundsAction(amount, currency);
+
+        if (!result.ok) {
+          throw new Error(result.error);
+        }
+
+        setPortfolio(result.portfolio);
+        notifyFinanceRefresh();
+      } finally {
+        setIsPending(false);
+      }
+    },
+    []
+  );
+
+  const withdrawFunds = React.useCallback(
+    async (amount: number, currency: PortfolioTransferCurrency = "RUB") => {
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error("Введите корректную сумму вывода.");
+      }
+
+      setIsPending(true);
+
+      try {
+        const result = await withdrawFundsAction(amount, currency);
+
+        if (!result.ok) {
+          throw new Error(result.error);
+        }
+
+        setPortfolio(result.portfolio);
+        notifyFinanceRefresh();
+      } finally {
+        setIsPending(false);
+      }
+    },
+    []
+  );
 
   const tradeCurrency = React.useCallback(
     async ({
@@ -316,6 +352,7 @@ export function PortfolioProvider({
       depositFunds,
       tradeCurrency,
       tradeStock,
+      withdrawFunds,
     }),
     [
       depositFunds,
@@ -324,6 +361,7 @@ export function PortfolioProvider({
       refreshPortfolio,
       tradeCurrency,
       tradeStock,
+      withdrawFunds,
     ]
   );
 

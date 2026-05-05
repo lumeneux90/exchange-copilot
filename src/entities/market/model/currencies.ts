@@ -1,10 +1,9 @@
-export const ACTIVE_FX_CURRENCY_CODES = ["USD", "EUR", "CNY", "HKD"] as const;
+export const ACTIVE_FX_CURRENCY_CODES = ["USD", "EUR", "CNY"] as const;
 
 const currencyLabelMap: Record<string, string> = {
   USD: "Доллар США",
   EUR: "Евро",
   CNY: "Китайский юань",
-  HKD: "Гонконгский доллар",
 };
 
 const activeFxCurrencyCodeSet = new Set<string>(ACTIVE_FX_CURRENCY_CODES);

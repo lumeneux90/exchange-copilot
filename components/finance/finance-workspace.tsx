@@ -6,13 +6,84 @@ import { RiTimeLine } from "@remixicon/react";
 import { AccountCardsCarousel } from "@/components/finance/account-cards-carousel";
 import { OrderForm } from "@/components/finance/order-form";
 import { OrdersTable } from "@/components/finance/orders-table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { FinanceState } from "@/src/features/finance/model/types";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type {
+  FinanceState,
+  FinancialOrderItem,
+} from "@/src/features/finance/model/types";
 
 const HISTORY_PAGE_SIZE = 8;
 
+type OrderOwnerFilter = "all" | "own" | "others";
+
+const orderOwnerFilterLabels: Record<OrderOwnerFilter, string> = {
+  all: "Все",
+  own: "Свои",
+  others: "Другие",
+};
+
+function filterOrdersByOwner(
+  orders: FinancialOrderItem[],
+  filter: OrderOwnerFilter
+) {
+  if (filter === "own") {
+    return orders.filter((order) => order.relation === "own");
+  }
+
+  if (filter === "others") {
+    return orders.filter((order) => order.relation !== "own");
+  }
+
+  return orders;
+}
+
+function OrderOwnerFilterToggle({
+  value,
+  onValueChange,
+}: {
+  value: OrderOwnerFilter;
+  onValueChange: (value: OrderOwnerFilter) => void;
+}) {
+  return (
+    <ToggleGroup
+      multiple={false}
+      value={[value]}
+      onValueChange={(nextValue) => {
+        const [selectedValue] = nextValue as OrderOwnerFilter[];
+
+        if (selectedValue) {
+          onValueChange(selectedValue);
+        }
+      }}
+      variant="outline"
+      size="sm"
+    >
+      {Object.entries(orderOwnerFilterLabels).map(([filter, label]) => (
+        <ToggleGroupItem
+          key={filter}
+          value={filter}
+          className="aria-pressed:bg-primary aria-pressed:text-primary-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+        >
+          {label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
 export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
   const [localFinance, setLocalFinance] = React.useState(finance);
+  const [openOrdersFilter, setOpenOrdersFilter] =
+    React.useState<OrderOwnerFilter>("all");
+  const [historyOrdersFilter, setHistoryOrdersFilter] =
+    React.useState<OrderOwnerFilter>("all");
 
   React.useEffect(() => {
     setLocalFinance(finance);
@@ -23,6 +94,11 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
   );
   const openOrders = localFinance.orders.filter(
     (order) => order.status === "OPEN"
+  );
+  const filteredOpenOrders = filterOrdersByOwner(openOrders, openOrdersFilter);
+  const filteredHistoryOrders = filterOrdersByOwner(
+    localFinance.orders,
+    historyOrdersFilter
   );
 
   return (
@@ -36,12 +112,18 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Открытые заявки</CardTitle>
+            <CardAction>
+              <OrderOwnerFilterToggle
+                value={openOrdersFilter}
+                onValueChange={setOpenOrdersFilter}
+              />
+            </CardAction>
           </CardHeader>
           <CardContent>
             <OrdersTable
               emptyTitle="Открытых заявок нет"
               onFinanceChange={setLocalFinance}
-              orders={openOrders}
+              orders={filteredOpenOrders}
             />
           </CardContent>
         </Card>
@@ -50,12 +132,18 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
       <Card className="min-w-0">
         <CardHeader>
           <CardTitle>История ордеров</CardTitle>
+          <CardAction>
+            <OrderOwnerFilterToggle
+              value={historyOrdersFilter}
+              onValueChange={setHistoryOrdersFilter}
+            />
+          </CardAction>
         </CardHeader>
         <CardContent>
           <OrdersTable
             emptyIcon={<RiTimeLine />}
             emptyTitle="История пуста"
-            orders={localFinance.orders}
+            orders={filteredHistoryOrders}
             pageSize={HISTORY_PAGE_SIZE}
             showActions={false}
           />

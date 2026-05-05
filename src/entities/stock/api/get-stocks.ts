@@ -2,7 +2,7 @@ import type { Stock } from "@/src/entities/stock/model/types";
 
 const MOEX_URL =
   "https://iss.moex.com/iss/engines/stock/markets/shares/securities.json";
-const DEFAULT_STOCKS_LIMIT = 80;
+const DEFAULT_STOCKS_LIMIT =50;
 
 type MoexRow = Array<string | number | null>;
 

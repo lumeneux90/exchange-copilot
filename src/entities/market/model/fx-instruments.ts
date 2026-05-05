@@ -26,12 +26,6 @@ const ALL_FX_INSTRUMENTS: FxInstrument[] = [
     secid: "CNYRUB_TOM",
     cbrId: "R01375",
   },
-  {
-    code: "HKD",
-    label: "HKD/RUB",
-    secid: "HKDRUB_TOM",
-    cbrId: "R01200",
-  },
 ];
 
 export const FX_INSTRUMENTS: FxInstrument[] = ALL_FX_INSTRUMENTS.filter(
