@@ -17,9 +17,9 @@ const SERIALIZABLE_TRANSACTION_RETRIES = 3;
 const FINANCE_ASSETS: FinanceAsset[] = ["RUB", "USD", "XCP"];
 
 const INITIAL_ACCOUNT_BALANCES: Record<FinanceAsset, number> = {
-  RUB: 100_000,
-  USD: 1_000,
-  XCP: 250,
+  RUB: 300_000,
+  USD: 3_000,
+  XCP: 300,
 };
 
 function toNumber(value: Prisma.Decimal | number | null | undefined) {
