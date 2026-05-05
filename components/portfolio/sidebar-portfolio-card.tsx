@@ -1,10 +1,8 @@
 "use client";
 
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { RiBankCardLine } from "@remixicon/react";
 
 import { DepositFundsSheet } from "@/components/deposit-funds-sheet";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -31,8 +29,7 @@ import { cn } from "@/src/lib/utils";
 const allocationChartConfig = {
   cash: {
     label: "Свободные деньги",
-    color:
-      "color-mix(in oklab, var(--color-muted-foreground) 35%, transparent)",
+    color: "var(--ring)",
   },
   stocks: {
     label: "Акции",
@@ -40,7 +37,7 @@ const allocationChartConfig = {
   },
   fx: {
     label: "Валюта",
-    color: "var(--chart-3)",
+    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
@@ -103,21 +100,21 @@ export function SidebarPortfolioCard({
   const allocationSegments = [
     {
       chartKey: "cash",
-      color: "bg-muted-foreground/35",
+      color: allocationChartConfig.cash.color,
       label: "Свободные деньги",
       share: totalValue > 0 ? snapshot.cashBalance / totalValue : 0,
       value: snapshot.cashBalance,
     },
     {
       chartKey: "stocks",
-      color: "bg-primary",
+      color: allocationChartConfig.stocks.color,
       label: "Акции",
       share: totalValue > 0 ? snapshot.marketValue / totalValue : 0,
       value: snapshot.marketValue,
     },
     {
       chartKey: "fx",
-      color: "bg-chart-3",
+      color: allocationChartConfig.fx.color,
       label: "Валюта",
       share: totalValue > 0 ? snapshot.currenciesMarketValue / totalValue : 0,
       value: snapshot.currenciesMarketValue,
@@ -201,10 +198,8 @@ export function SidebarPortfolioCard({
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className={cn(
-                        "inline-flex size-2 rounded-full",
-                        segment.color
-                      )}
+                      className="inline-flex size-2 rounded-full"
+                      style={{ backgroundColor: segment.color }}
                     />
                     <span>{segment.label}</span>
                   </div>
@@ -225,15 +220,12 @@ export function SidebarPortfolioCard({
               triggerLabel="Пополнить"
               triggerClassName="w-full"
             />
-            <Button
-              variant="destructive"
-              className="w-full"
-              type="button"
-              disabled
-            >
-              <RiBankCardLine />
-              Вывести
-            </Button>
+            <DepositFundsSheet
+              operation="withdraw"
+              triggerLabel="Вывести"
+              triggerVariant="destructive"
+              triggerClassName="w-full"
+            />
           </CardFooter>
         </Card>
       </SidebarGroupContent>
