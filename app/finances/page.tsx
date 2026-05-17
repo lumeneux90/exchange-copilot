@@ -22,7 +22,7 @@ export default async function FinancesPage() {
 
   return (
     <DashboardShell
-      title="Финансы"
+      title="Споты"
       currencyRates={currencyRates}
       stocks={stocks}
     >

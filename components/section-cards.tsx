@@ -409,9 +409,9 @@ export function SectionCards({
       <Card className="@container/card @xl/main:col-span-2">
         <CardHeader>
           <CardTitle className="text-lg font-semibold @[250px]/card:text-xl">
-            Валютные пары
+            Курсы валют
           </CardTitle>
-          <CardDescription>Курсы и быстрый обмен</CardDescription>
+          <CardDescription>Официальные ориентиры ЦБ</CardDescription>
         </CardHeader>
         <CardContent>
           <FxTradePanel currencyRates={summary.currencyRates} />

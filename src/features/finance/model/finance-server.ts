@@ -7,20 +7,101 @@ import type {
   FinanceAsset,
   FinanceState,
   FinancialAccountItem,
+  FinancialMarketPairItem,
   FinancialOrderItem,
+  FinancialOrderSide,
+  FinancialTradeItem,
 } from "@/src/features/finance/model/types";
 
 const DECIMAL_SCALE = 8;
 const ORDER_HISTORY_LIMIT = 30;
 const SERIALIZABLE_TRANSACTION_RETRIES = 3;
 
-const FINANCE_ASSETS: FinanceAsset[] = ["RUB", "USD", "XCP"];
+const DEFAULT_MARKET_PAIR_SYMBOL = "XCP/RUB";
+
+const FINANCE_ASSETS: FinanceAsset[] = ["RUB", "USD", "EUR", "CNY", "XCP"];
 
 const INITIAL_ACCOUNT_BALANCES: Record<FinanceAsset, number> = {
+  CNY: 10_000,
+  EUR: 1_000,
   RUB: 300_000,
   USD: 3_000,
   XCP: 300,
 };
+
+const MARKET_PAIR_SEEDS = [
+  {
+    amountPrecision: 2,
+    baseAsset: "XCP",
+    label: "XCP/RUB",
+    pricePrecision: 2,
+    quoteAsset: "RUB",
+    sortOrder: 10,
+    symbol: "XCP/RUB",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "USD",
+    label: "USD/RUB",
+    pricePrecision: 4,
+    quoteAsset: "RUB",
+    sortOrder: 20,
+    symbol: "USD/RUB",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "XCP",
+    label: "XCP/USD",
+    pricePrecision: 4,
+    quoteAsset: "USD",
+    sortOrder: 25,
+    symbol: "XCP/USD",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "EUR",
+    label: "EUR/RUB",
+    pricePrecision: 4,
+    quoteAsset: "RUB",
+    sortOrder: 30,
+    symbol: "EUR/RUB",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "EUR",
+    label: "EUR/USD",
+    pricePrecision: 5,
+    quoteAsset: "USD",
+    sortOrder: 35,
+    symbol: "EUR/USD",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "CNY",
+    label: "CNY/RUB",
+    pricePrecision: 4,
+    quoteAsset: "RUB",
+    sortOrder: 40,
+    symbol: "CNY/RUB",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "CNY",
+    label: "CNY/USD",
+    pricePrecision: 5,
+    quoteAsset: "USD",
+    sortOrder: 45,
+    symbol: "CNY/USD",
+  },
+] satisfies Array<{
+  amountPrecision: number;
+  baseAsset: FinanceAsset;
+  label: string;
+  pricePrecision: number;
+  quoteAsset: FinanceAsset;
+  sortOrder: number;
+  symbol: string;
+}>;
 
 function toNumber(value: Prisma.Decimal | number | null | undefined) {
   if (value == null) {
@@ -32,6 +113,10 @@ function toNumber(value: Prisma.Decimal | number | null | undefined) {
 
 function toDecimal(value: number) {
   return new Prisma.Decimal(value.toFixed(DECIMAL_SCALE));
+}
+
+function roundDecimal(value: number) {
+  return Number(value.toFixed(DECIMAL_SCALE));
 }
 
 function isSerializableTransactionConflict(error: unknown) {
@@ -100,9 +185,13 @@ function getAccountDisplayNumber(account: { asset: FinanceAsset; id: string }) {
   const prefix =
     account.asset === "USD"
       ? "8401"
-      : account.asset === "XCP"
-        ? "9907"
-        : "2204";
+      : account.asset === "EUR"
+        ? "9782"
+        : account.asset === "CNY"
+          ? "1568"
+          : account.asset === "XCP"
+            ? "9907"
+            : "2204";
 
   return `${prefix} **** **** ${suffix}`;
 }
@@ -127,9 +216,33 @@ function getCardIssuer(asset: FinanceAsset) {
       return "Xchange Premium";
     case "USD":
       return "Xchange Global";
+    case "EUR":
+      return "Xchange Euro";
+    case "CNY":
+      return "Xchange Yuan";
     case "XCP":
       return "Xchange Token";
   }
+}
+
+function mapMarketPair(pair: {
+  amountPrecision: number;
+  baseAsset: FinanceAsset;
+  id: string;
+  label: string;
+  pricePrecision: number;
+  quoteAsset: FinanceAsset;
+  symbol: string;
+}): FinancialMarketPairItem {
+  return {
+    amountPrecision: pair.amountPrecision,
+    baseAsset: pair.baseAsset,
+    id: pair.id,
+    label: pair.label,
+    pricePrecision: pair.pricePrecision,
+    quoteAsset: pair.quoteAsset,
+    symbol: pair.symbol,
+  };
 }
 
 function mapAccount(
@@ -138,6 +251,7 @@ function mapAccount(
     balance: Prisma.Decimal;
     createdAt: Date;
     id: string;
+    lockedBalance: Prisma.Decimal;
   },
   holderName: string
 ): FinancialAccountItem {
@@ -155,6 +269,7 @@ function mapAccount(
     },
     displayNumber,
     id: account.id,
+    lockedBalance: toNumber(account.lockedBalance),
   };
 }
 
@@ -168,8 +283,13 @@ function mapOrder(
     createdAt: Date;
     creator: { login: string };
     creatorUserId: string;
+    filledAmount: Prisma.Decimal;
     id: string;
-    status: "OPEN" | "ACCEPTED" | "CANCELLED";
+    pairId: string | null;
+    price: Prisma.Decimal;
+    quoteAsset: FinanceAsset;
+    side: FinancialOrderSide;
+    status: "OPEN" | "PARTIALLY_FILLED" | "ACCEPTED" | "CANCELLED";
   },
   userId: string
 ): FinancialOrderItem {
@@ -182,13 +302,46 @@ function mapOrder(
     asset: order.asset,
     createdAt: order.createdAt.toISOString(),
     creatorLogin: order.creator.login,
+    filledAmount: toNumber(order.filledAmount),
     id: order.id,
+    pairId: order.pairId,
+    price: toNumber(order.price),
+    quoteAsset: order.quoteAsset,
     relation: isOwn
       ? "own"
       : order.acceptedByUserId === userId
         ? "accepted"
         : "available",
+    side: order.side,
     status: order.status,
+  };
+}
+
+function mapTrade(
+  trade: {
+    amount: Prisma.Decimal;
+    asset: FinanceAsset;
+    buyerUserId: string;
+    executedAt: Date;
+    id: string;
+    pairId: string | null;
+    price: Prisma.Decimal;
+    quoteAmount: Prisma.Decimal;
+    quoteAsset: FinanceAsset;
+    sellerUserId: string;
+  },
+  userId: string
+): FinancialTradeItem {
+  return {
+    amount: toNumber(trade.amount),
+    asset: trade.asset,
+    executedAt: trade.executedAt.toISOString(),
+    id: trade.id,
+    pairId: trade.pairId,
+    price: toNumber(trade.price),
+    quoteAmount: toNumber(trade.quoteAmount),
+    quoteAsset: trade.quoteAsset,
+    side: trade.buyerUserId === userId ? "buy" : "sell",
   };
 }
 
@@ -229,6 +382,51 @@ async function ensureFinancialAccounts(
   );
 }
 
+async function ensureFinancialMarketPairs(db: Prisma.TransactionClient) {
+  await Promise.all(
+    MARKET_PAIR_SEEDS.map((pair) =>
+      db.financialMarketPair.upsert({
+        where: { symbol: pair.symbol },
+        update: {
+          amountPrecision: pair.amountPrecision,
+          baseAsset: pair.baseAsset,
+          enabled: true,
+          label: pair.label,
+          pricePrecision: pair.pricePrecision,
+          quoteAsset: pair.quoteAsset,
+          sortOrder: pair.sortOrder,
+        },
+        create: {
+          amountPrecision: pair.amountPrecision,
+          baseAsset: pair.baseAsset,
+          label: pair.label,
+          pricePrecision: pair.pricePrecision,
+          quoteAsset: pair.quoteAsset,
+          sortOrder: pair.sortOrder,
+          symbol: pair.symbol,
+        },
+      })
+    )
+  );
+}
+
+async function getMarketPair(
+  db: Prisma.TransactionClient,
+  symbol = DEFAULT_MARKET_PAIR_SYMBOL
+) {
+  await ensureFinancialMarketPairs(db);
+
+  const pair = await db.financialMarketPair.findUnique({
+    where: { symbol },
+  });
+
+  if (!pair || !pair.enabled) {
+    throw new Error("Торговая пара недоступна.");
+  }
+
+  return pair;
+}
+
 async function getFinancialAccount(
   db: Prisma.TransactionClient,
   params: {
@@ -251,14 +449,61 @@ function assertAmount(amount: number) {
   }
 }
 
-export async function getFinanceState(userId: string): Promise<FinanceState> {
+function assertLimitPrice(price: number) {
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error("Введите корректную цену.");
+  }
+}
+
+function isOpenOrderStatus(status: string) {
+  return status === "OPEN" || status === "PARTIALLY_FILLED";
+}
+
+function getRemainingAmount(order: {
+  amount: Prisma.Decimal;
+  filledAmount: Prisma.Decimal;
+}) {
+  return Math.max(
+    0,
+    roundDecimal(toNumber(order.amount) - toNumber(order.filledAmount))
+  );
+}
+
+function getNextStatus(amount: number, filledAmount: number) {
+  if (filledAmount + Number.EPSILON >= amount) {
+    return "ACCEPTED" as const;
+  }
+
+  return filledAmount > 0 ? ("PARTIALLY_FILLED" as const) : ("OPEN" as const);
+}
+
+export async function getFinanceState(
+  userId: string,
+  selectedPairSymbol = DEFAULT_MARKET_PAIR_SYMBOL
+): Promise<FinanceState> {
   const prisma = getPrisma();
 
   await runSerializableTransaction(prisma, (tx) =>
-    ensureFinancialAccounts(tx, userId)
+    Promise.all([
+      ensureFinancialAccounts(tx, userId),
+      ensureFinancialMarketPairs(tx),
+    ])
   );
 
-  const [user, accounts, orders] = await Promise.all([
+  const marketPairs = await prisma.financialMarketPair.findMany({
+    where: { enabled: true },
+    orderBy: [{ sortOrder: "asc" }, { symbol: "asc" }],
+  });
+  const selectedPair =
+    marketPairs.find((pair) => pair.symbol === selectedPairSymbol) ??
+    marketPairs.find((pair) => pair.symbol === DEFAULT_MARKET_PAIR_SYMBOL) ??
+    marketPairs[0];
+
+  if (!selectedPair) {
+    throw new Error("Не настроены торговые пары.");
+  }
+
+  const [user, accounts, openOrders, historyOrders, trades] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { login: true },
@@ -269,16 +514,28 @@ export async function getFinanceState(userId: string): Promise<FinanceState> {
     }),
     prisma.financialOrder.findMany({
       where: {
-        OR: [
-          { creatorUserId: userId },
-          { acceptedByUserId: userId },
-          {
-            status: "OPEN",
-            NOT: {
-              creatorUserId: userId,
-            },
+        pairId: selectedPair.id,
+        status: { in: ["OPEN", "PARTIALLY_FILLED"] },
+      },
+      include: {
+        acceptedBy: {
+          select: {
+            login: true,
           },
-        ],
+        },
+        creator: {
+          select: {
+            login: true,
+          },
+        },
+      },
+      orderBy: [{ side: "asc" }, { price: "desc" }, { createdAt: "asc" }],
+    }),
+    prisma.financialOrder.findMany({
+      where: {
+        creatorUserId: userId,
+        pairId: selectedPair.id,
+        status: { in: ["ACCEPTED", "CANCELLED"] },
       },
       include: {
         acceptedBy: {
@@ -295,26 +552,43 @@ export async function getFinanceState(userId: string): Promise<FinanceState> {
       orderBy: { createdAt: "desc" },
       take: ORDER_HISTORY_LIMIT,
     }),
+    prisma.financialTrade.findMany({
+      where: {
+        pairId: selectedPair.id,
+      },
+      orderBy: { executedAt: "desc" },
+      take: ORDER_HISTORY_LIMIT,
+    }),
   ]);
 
   return {
     accounts: accounts.map((account) => mapAccount(account, user.login)),
     currentUserLogin: user.login,
-    orders: orders.map((order) => mapOrder(order, userId)),
+    marketPairs: marketPairs.map(mapMarketPair),
+    orders: [...openOrders, ...historyOrders].map((order) =>
+      mapOrder(order, userId)
+    ),
+    selectedPairSymbol: selectedPair.symbol,
+    trades: trades.map((trade) => mapTrade(trade, userId)),
   };
 }
 
 export async function createFinancialOrder(params: {
   amount: number;
-  asset: FinanceAsset;
   creatorUserId: string;
+  pairSymbol?: string;
+  price: number;
+  side: FinancialOrderSide;
 }) {
   const prisma = getPrisma();
   const amount = Number(params.amount);
+  const price = Number(params.price);
 
   assertAmount(amount);
+  assertLimitPrice(price);
 
   await runSerializableTransaction(prisma, async (tx) => {
+    const pair = await getMarketPair(tx, params.pairSymbol);
     const creator = await tx.user.findUnique({
       where: { id: params.creatorUserId },
       select: { id: true },
@@ -325,79 +599,204 @@ export async function createFinancialOrder(params: {
     }
 
     await ensureFinancialAccounts(tx, params.creatorUserId);
+    const lockAsset = params.side === "BUY" ? pair.quoteAsset : pair.baseAsset;
+    const lockAmount =
+      params.side === "BUY" ? roundDecimal(amount * price) : amount;
+    const lockAccount = await getFinancialAccount(tx, {
+      asset: lockAsset,
+      userId: params.creatorUserId,
+    });
 
-    await tx.financialOrder.create({
+    if (toNumber(lockAccount.balance) + Number.EPSILON < lockAmount) {
+      throw new Error("Недостаточно свободных средств для заявки.");
+    }
+
+    await tx.financialAccount.update({
+      where: { id: lockAccount.id },
       data: {
-        amount: toDecimal(amount),
-        asset: params.asset,
-        creatorUserId: params.creatorUserId,
+        balance: {
+          decrement: toDecimal(lockAmount),
+        },
+        lockedBalance: {
+          increment: toDecimal(lockAmount),
+        },
       },
     });
+
+    const order = await tx.financialOrder.create({
+      data: {
+        amount: toDecimal(amount),
+        asset: pair.baseAsset,
+        creatorUserId: params.creatorUserId,
+        pairId: pair.id,
+        price: toDecimal(price),
+        quoteAsset: pair.quoteAsset,
+        side: params.side,
+      },
+    });
+
+    await matchFinancialOrder(tx, order.id);
   });
 }
 
-export async function acceptFinancialOrder(params: {
-  orderId: string;
-  userId: string;
-}) {
-  const prisma = getPrisma();
-
-  await runSerializableTransaction(prisma, async (tx) => {
-    const order = await tx.financialOrder.findUnique({
-      where: { id: params.orderId },
+async function matchFinancialOrder(
+  tx: Prisma.TransactionClient,
+  orderId: string
+) {
+  while (true) {
+    const taker = await tx.financialOrder.findUniqueOrThrow({
+      where: { id: orderId },
     });
 
-    if (!order || order.status !== "OPEN") {
-      throw new Error("Ордер уже не активен.");
+    if (!isOpenOrderStatus(taker.status)) {
+      return;
     }
 
-    if (order.creatorUserId === params.userId) {
-      throw new Error("Нельзя принять собственный ордер.");
+    const takerRemaining = getRemainingAmount(taker);
+
+    if (takerRemaining <= 0) {
+      return;
     }
 
-    const amount = toNumber(order.amount);
-    const [debitAccount, creditAccount] = await Promise.all([
-      getFinancialAccount(tx, {
-        asset: order.asset,
-        userId: params.userId,
-      }),
-      getFinancialAccount(tx, {
-        asset: order.asset,
-        userId: order.creatorUserId,
-      }),
-    ]);
+    const maker = await tx.financialOrder.findFirst({
+      where: {
+        asset: taker.asset,
+        creatorUserId: { not: taker.creatorUserId },
+        pairId: taker.pairId,
+        quoteAsset: taker.quoteAsset,
+        side: taker.side === "BUY" ? "SELL" : "BUY",
+        status: { in: ["OPEN", "PARTIALLY_FILLED"] },
+        ...(taker.side === "BUY"
+          ? { price: { lte: taker.price } }
+          : { price: { gte: taker.price } }),
+      },
+      orderBy:
+        taker.side === "BUY"
+          ? [{ price: "asc" }, { createdAt: "asc" }]
+          : [{ price: "desc" }, { createdAt: "asc" }],
+    });
 
-    if (toNumber(debitAccount.balance) + Number.EPSILON < amount) {
-      throw new Error("Недостаточно средств для исполнения ордера.");
+    if (!maker) {
+      return;
     }
+
+    const makerRemaining = getRemainingAmount(maker);
+    const tradeAmount = roundDecimal(Math.min(takerRemaining, makerRemaining));
+    const tradePrice = toNumber(maker.price);
+    const quoteAmount = roundDecimal(tradeAmount * tradePrice);
+    const buyOrder = taker.side === "BUY" ? taker : maker;
+    const sellOrder = taker.side === "SELL" ? taker : maker;
+    const buyerUserId = buyOrder.creatorUserId;
+    const sellerUserId = sellOrder.creatorUserId;
+    const buyerReservedQuote = roundDecimal(
+      tradeAmount * toNumber(buyOrder.price)
+    );
+    const buyerQuoteRefund = roundDecimal(buyerReservedQuote - quoteAmount);
 
     await Promise.all([
       tx.financialAccount.update({
-        where: { id: debitAccount.id },
+        where: {
+          userId_asset: {
+            asset: taker.quoteAsset,
+            userId: buyerUserId,
+          },
+        },
         data: {
-          balance: {
-            decrement: order.amount,
+          balance:
+            buyerQuoteRefund > 0
+              ? { increment: toDecimal(buyerQuoteRefund) }
+              : undefined,
+          lockedBalance: {
+            decrement: toDecimal(buyerReservedQuote),
           },
         },
       }),
       tx.financialAccount.update({
-        where: { id: creditAccount.id },
+        where: {
+          userId_asset: {
+            asset: taker.asset,
+            userId: buyerUserId,
+          },
+        },
         data: {
           balance: {
-            increment: order.amount,
+            increment: toDecimal(tradeAmount),
           },
         },
       }),
-      tx.financialOrder.update({
-        where: { id: order.id },
+      tx.financialAccount.update({
+        where: {
+          userId_asset: {
+            asset: taker.asset,
+            userId: sellerUserId,
+          },
+        },
         data: {
-          acceptedByUserId: params.userId,
-          acceptedAt: new Date(),
-          status: "ACCEPTED",
+          lockedBalance: {
+            decrement: toDecimal(tradeAmount),
+          },
+        },
+      }),
+      tx.financialAccount.update({
+        where: {
+          userId_asset: {
+            asset: taker.quoteAsset,
+            userId: sellerUserId,
+          },
+        },
+        data: {
+          balance: {
+            increment: toDecimal(quoteAmount),
+          },
+        },
+      }),
+      tx.financialTrade.create({
+        data: {
+          amount: toDecimal(tradeAmount),
+          asset: taker.asset,
+          buyOrderId: buyOrder.id,
+          buyerUserId,
+          pairId: taker.pairId,
+          price: toDecimal(tradePrice),
+          quoteAmount: toDecimal(quoteAmount),
+          quoteAsset: taker.quoteAsset,
+          sellOrderId: sellOrder.id,
+          sellerUserId,
         },
       }),
     ]);
-  });
+
+    const nextTakerFilled = roundDecimal(toNumber(taker.filledAmount) + tradeAmount);
+    const nextMakerFilled = roundDecimal(toNumber(maker.filledAmount) + tradeAmount);
+    const now = new Date();
+
+    await Promise.all([
+      tx.financialOrder.update({
+        where: { id: taker.id },
+        data: {
+          acceptedAt:
+            nextTakerFilled + Number.EPSILON >= toNumber(taker.amount)
+              ? now
+              : undefined,
+          acceptedByUserId: maker.creatorUserId,
+          filledAmount: toDecimal(nextTakerFilled),
+          status: getNextStatus(toNumber(taker.amount), nextTakerFilled),
+        },
+      }),
+      tx.financialOrder.update({
+        where: { id: maker.id },
+        data: {
+          acceptedAt:
+            nextMakerFilled + Number.EPSILON >= toNumber(maker.amount)
+              ? now
+              : undefined,
+          acceptedByUserId: taker.creatorUserId,
+          filledAmount: toDecimal(nextMakerFilled),
+          status: getNextStatus(toNumber(maker.amount), nextMakerFilled),
+        },
+      }),
+    ]);
+  }
 }
 
 export async function cancelFinancialOrder(params: {
@@ -406,20 +805,51 @@ export async function cancelFinancialOrder(params: {
 }) {
   const prisma = getPrisma();
 
-  const result = await prisma.financialOrder.updateMany({
-    where: {
-      creatorUserId: params.userId,
-      id: params.orderId,
-      status: "OPEN",
-    },
-    data: {
-      status: "CANCELLED",
-    },
-  });
+  await runSerializableTransaction(prisma, async (tx) => {
+    const order = await tx.financialOrder.findFirst({
+      where: {
+        creatorUserId: params.userId,
+        id: params.orderId,
+        status: { in: ["OPEN", "PARTIALLY_FILLED"] },
+      },
+    });
 
-  if (result.count === 0) {
-    throw new Error("Отменить можно только свой открытый ордер.");
-  }
+    if (!order) {
+      throw new Error("Отменить можно только свой открытый ордер.");
+    }
+
+    const remainingAmount = getRemainingAmount(order);
+    const releaseAsset = order.side === "BUY" ? order.quoteAsset : order.asset;
+    const releaseAmount =
+      order.side === "BUY"
+        ? roundDecimal(remainingAmount * toNumber(order.price))
+        : remainingAmount;
+
+    await Promise.all([
+      tx.financialAccount.update({
+        where: {
+          userId_asset: {
+            asset: releaseAsset,
+            userId: params.userId,
+          },
+        },
+        data: {
+          balance: {
+            increment: toDecimal(releaseAmount),
+          },
+          lockedBalance: {
+            decrement: toDecimal(releaseAmount),
+          },
+        },
+      }),
+      tx.financialOrder.update({
+        where: { id: order.id },
+        data: {
+          status: "CANCELLED",
+        },
+      }),
+    ]);
+  });
 }
 
 export async function creditFinancialAccount(params: {

@@ -3,15 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import {
-  acceptFinancialOrder,
   cancelFinancialOrder,
   createFinancialOrder,
   getFinanceState,
 } from "@/src/features/finance/model/finance-server";
 import {
   emptyFinanceState,
-  type FinanceAsset,
   type FinanceState,
+  type FinancialOrderSide,
 } from "@/src/features/finance/model/types";
 import { getErrorMessage } from "@/src/lib/errors";
 import { getCurrentUser } from "@/src/lib/session";
@@ -30,19 +29,23 @@ type FinanceActionResult =
   | { ok: true; finance: FinanceState }
   | { ok: false; error: string };
 
-export async function getFinanceStateAction(): Promise<FinanceState> {
+export async function getFinanceStateAction(
+  selectedPairSymbol?: string
+): Promise<FinanceState> {
   const user = await getCurrentUser();
 
   if (!user) {
     return emptyFinanceState();
   }
 
-  return getFinanceState(user.id);
+  return getFinanceState(user.id, selectedPairSymbol);
 }
 
 export async function createFinancialOrderAction(params: {
   amount: number;
-  asset: FinanceAsset;
+  pairSymbol?: string;
+  price: number;
+  side: FinancialOrderSide;
 }): Promise<FinanceActionResult> {
   try {
     const user = await requireCurrentUser();
@@ -51,7 +54,7 @@ export async function createFinancialOrderAction(params: {
       ...params,
       creatorUserId: user.id,
     });
-    const finance = await getFinanceState(user.id);
+    const finance = await getFinanceState(user.id, params.pairSymbol);
 
     revalidatePath("/finances");
 
@@ -64,31 +67,9 @@ export async function createFinancialOrderAction(params: {
   }
 }
 
-export async function acceptFinancialOrderAction(
-  orderId: string
-): Promise<FinanceActionResult> {
-  try {
-    const user = await requireCurrentUser();
-
-    await acceptFinancialOrder({
-      orderId,
-      userId: user.id,
-    });
-    const finance = await getFinanceState(user.id);
-
-    revalidatePath("/finances");
-
-    return { ok: true, finance };
-  } catch (error) {
-    return {
-      ok: false,
-      error: getErrorMessage(error, "Не удалось принять ордер."),
-    };
-  }
-}
-
 export async function cancelFinancialOrderAction(
-  orderId: string
+  orderId: string,
+  selectedPairSymbol?: string
 ): Promise<FinanceActionResult> {
   try {
     const user = await requireCurrentUser();
@@ -97,7 +78,7 @@ export async function cancelFinancialOrderAction(
       orderId,
       userId: user.id,
     });
-    const finance = await getFinanceState(user.id);
+    const finance = await getFinanceState(user.id, selectedPairSymbol);
 
     revalidatePath("/finances");
 

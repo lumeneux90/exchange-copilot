@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
+import { SidebarSpotAccounts } from "@/components/finance/sidebar-spot-accounts";
 import { NavMain } from "@/components/nav-main";
 import { SidebarWatchlistCard } from "@/components/portfolio/sidebar-watchlist-card";
 import { NavUser } from "@/components/nav-user";
 import { SidebarPortfolioCard } from "@/components/portfolio/sidebar-portfolio-card";
-import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -57,18 +58,13 @@ const data = {
       icon: <RiWallet3Line />,
     },
     {
-      title: "Финансы",
+      title: "Споты",
       url: "/finances",
       matchUrl: "/finances",
       icon: <RiBankCardLine />,
     },
   ],
 };
-
-const tokenFormatter = new Intl.NumberFormat("ru-RU", {
-  maximumFractionDigits: 0,
-  minimumFractionDigits: 0,
-});
 
 export function AppSidebar({
   currencyRates,
@@ -78,29 +74,10 @@ export function AppSidebar({
   currencyRates: CurrencyRate[];
   stocks: Stock[];
 }) {
+  const pathname = usePathname();
   const currentUser = useCurrentUser();
-  const { finance, isPending } = useFinance();
-  const tokenAccount = finance.accounts.find(
-    (account) => account.asset === "XCP"
-  );
-  const navMain = React.useMemo(
-    () =>
-      data.navMain.map((item) =>
-        item.url === "/finances"
-          ? {
-              ...item,
-              endContent: currentUser ? (
-                <Badge>
-                  {isPending
-                    ? "..."
-                    : `${tokenFormatter.format(tokenAccount?.balance ?? 0)} XCP`}
-                </Badge>
-              ) : null,
-            }
-          : item
-      ),
-    [currentUser, isPending, tokenAccount?.balance]
-  );
+  const { finance } = useFinance();
+  const isSpotPage = pathname.startsWith("/finances");
   const user = {
     login: currentUser?.login ?? "unknown",
     statusLabel: "Онлайн",
@@ -122,9 +99,18 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} />
-        <SidebarPortfolioCard currencyRates={currencyRates} stocks={stocks} />
-        <SidebarWatchlistCard stocks={stocks} />
+        <NavMain items={data.navMain} />
+        {isSpotPage ? (
+          <SidebarSpotAccounts accounts={finance.accounts} />
+        ) : (
+          <>
+            <SidebarPortfolioCard
+              currencyRates={currencyRates}
+              stocks={stocks}
+            />
+            <SidebarWatchlistCard stocks={stocks} />
+          </>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

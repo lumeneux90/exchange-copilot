@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { RiPieChartLine } from "@remixicon/react";
 
 import { CompanyLogo } from "@/components/company-logo";
-import { CurrencyFlag } from "@/components/currency-flag";
 import { DepositFundsSheet } from "@/components/deposit-funds-sheet";
 import { TradeOrderSheet } from "@/components/trade-order-sheet";
 import {
@@ -28,7 +27,6 @@ import {
   buildPortfolioSnapshot,
   usePortfolio,
 } from "@/src/features/portfolio/model/portfolio-context";
-import { getCurrencyLabel } from "@/src/entities/market/model/currencies";
 import {
   formatSignedCurrency,
   formatSignedPercent,
@@ -36,13 +34,6 @@ import {
 } from "@/src/lib/money";
 import { cn } from "@/src/lib/utils";
 import React from "react";
-
-function formatCurrencyUnits(value: number, code: string) {
-  return `${new Intl.NumberFormat("ru-RU", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)} ${code}`;
-}
 
 function getTrendTone(value: number) {
   if (value > 0) {
@@ -70,25 +61,15 @@ export function PortfolioOverview({
     () => new Map(stocks.map((stock) => [stock.ticker, stock])),
     [stocks]
   );
-  const hasAssets =
-    snapshot.holdings.length > 0 || snapshot.currencies.length > 0;
 
   return (
     <div className="grid gap-4 px-4 lg:px-6">
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
             <CardDescription>Общая стоимость</CardDescription>
             <CardTitle className="text-2xl font-semibold">
               {rubFormatter.format(snapshot.totalValue)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Свободные деньги</CardDescription>
-            <CardTitle className="text-2xl font-semibold">
-              {rubFormatter.format(snapshot.cashBalance)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -106,83 +87,6 @@ export function PortfolioOverview({
           </CardHeader>
         </Card>
       </section>
-
-      <Card>
-        <CardHeader>
-          <CardDescription>Валютные остатки</CardDescription>
-        </CardHeader>
-        {snapshot.currencies.length > 0 ? (
-          <CardContent className="grid gap-3">
-            {snapshot.currencies.map((currency) => {
-              const profitLossTone = getTrendTone(currency.profitLoss);
-              const profitLossPercentTone = getTrendTone(
-                currency.profitLossPercent
-              );
-              return (
-                <div
-                  key={currency.code}
-                  className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_repeat(4,minmax(0,1fr))]"
-                >
-                  <div className="flex items-center gap-3">
-                    <CurrencyFlag code={currency.code} className="size-10" />
-                    <div className="min-w-0 space-y-1">
-                      <div className="text-sm font-semibold">
-                        {formatCurrencyUnits(currency.quantity, currency.code)}
-                      </div>
-                      <div className="text-muted-foreground truncate text-xs">
-                        {getCurrencyLabel(currency.code)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground text-xs">
-                      Курс сейчас
-                    </div>
-                    <div className="text-sm font-medium">
-                      {rubFormatter.format(currency.currentRate)}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground text-xs">
-                      Стоимость
-                    </div>
-                    <div className="text-sm font-medium">
-                      {rubFormatter.format(currency.marketValue)}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground text-xs">
-                      Результат
-                    </div>
-                    <div className={cn("text-sm font-medium", profitLossTone)}>
-                      {formatSignedCurrency(currency.profitLoss)}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground text-xs">
-                      Доходность
-                    </div>
-                    <div
-                      className={cn(
-                        "text-sm font-medium",
-                        profitLossPercentTone
-                      )}
-                    >
-                      {formatSignedPercent(currency.profitLossPercent)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        ) : (
-          <CardContent>
-            <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              Пока нет валютных остатков.
-            </div>
-          </CardContent>
-        )}
-      </Card>
 
       <Card id="positions" className="min-h-[24rem]">
         <CardHeader>
@@ -286,7 +190,7 @@ export function PortfolioOverview({
               );
             })}
           </CardContent>
-        ) : !hasAssets ? (
+        ) : (
           <CardContent className="flex flex-1">
             <Empty className="border">
               <EmptyHeader>
@@ -302,12 +206,6 @@ export function PortfolioOverview({
                 <DepositFundsSheet triggerLabel="Пополнить счет" />
               </EmptyContent>
             </Empty>
-          </CardContent>
-        ) : (
-          <CardContent>
-            <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-              Акций пока нет, но валютная часть портфеля уже активна.
-            </div>
           </CardContent>
         )}
       </Card>

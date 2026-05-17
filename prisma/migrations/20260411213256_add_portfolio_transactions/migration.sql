@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "PortfolioTransactionType" AS ENUM ('DEPOSIT', 'BUY', 'SELL', 'FX_BUY', 'FX_SELL');
+CREATE TYPE "PortfolioTransactionType" AS ENUM ('DEPOSIT', 'BUY', 'SELL');
 
 -- CreateTable
 CREATE TABLE "portfolio_transactions" (

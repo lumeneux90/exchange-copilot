@@ -7,6 +7,7 @@ import {
   formatAssetAmount,
   formatOrderDate,
   formatOrderId,
+  formatOrderSide,
   getStatusBadgeVariant,
   getStatusLabel,
 } from "@/components/finance/finance-formatters";
@@ -101,7 +102,9 @@ export function OrdersTable({
             <TableRow>
               <TableHead>Заявка</TableHead>
               <TableHead>Автор</TableHead>
-              <TableHead>Сумма</TableHead>
+              <TableHead>Сторона</TableHead>
+              <TableHead>Объем</TableHead>
+              <TableHead>Цена</TableHead>
               <TableHead>Статус</TableHead>
               <TableHead>Дата</TableHead>
               {showActions ? (
@@ -122,8 +125,21 @@ export function OrdersTable({
                     {order.creatorLogin}
                   </div>
                 </TableCell>
+                <TableCell>
+                  <Badge variant={order.side === "BUY" ? "default" : "outline"}>
+                    {formatOrderSide(order.side)}
+                  </Badge>
+                </TableCell>
                 <TableCell className="font-medium tabular-nums">
                   {formatAssetAmount(order.amount, order.asset)}
+                  {order.filledAmount > 0 ? (
+                    <span className="text-muted-foreground ml-1 text-xs">
+                      / {formatAssetAmount(order.filledAmount, order.asset)}
+                    </span>
+                  ) : null}
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  {formatAssetAmount(order.price, order.quoteAsset)}
                 </TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(order.status)}>
