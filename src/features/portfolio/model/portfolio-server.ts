@@ -11,9 +11,7 @@ import type {
   PortfolioHistoryItem,
   PortfolioHistoryPage,
 } from "@/src/features/portfolio/model/history";
-import { isActiveFxCurrencyCode } from "@/src/entities/market/model/currencies";
 import type { Stock } from "@/src/entities/stock/model/types";
-import { calculateFxTradeFee } from "@/src/features/portfolio/model/fx-trade-fees";
 import { getStockMarketStatus } from "@/src/features/portfolio/model/market-hours";
 import { calculateStockTradeFee } from "@/src/features/portfolio/model/stock-trade-fees";
 import { getPrisma } from "@/src/lib/db";
@@ -111,7 +109,7 @@ async function runSerializableTransaction<T>(
 
 function mapPortfolioTransaction(transaction: {
   id: string;
-  type: "DEPOSIT" | "WITHDRAWAL" | "BUY" | "SELL" | "FX_BUY" | "FX_SELL";
+  type: PortfolioHistoryItem["type"];
   ticker: string | null;
   currencyCode: string | null;
   quantity: Prisma.Decimal | null;
@@ -672,170 +670,6 @@ export async function withdrawFunds(params: {
     }
 
     await Promise.all(operations);
-
-    return tx.portfolio.findUniqueOrThrow({
-      where: { id: currentPortfolio.id },
-      include: {
-        cashBalances: true,
-        positions: true,
-      },
-    });
-  });
-
-  return mapPortfolioState(portfolio);
-}
-
-export async function tradeCurrency(params: {
-  userId: string;
-  code: string;
-  side: "buy" | "sell";
-  amount: number;
-  rate: number;
-}) {
-  const prisma = getPrisma();
-  const { amount, code, rate, side, userId } = params;
-  const fee = calculateFxTradeFee(side === "buy" ? amount : amount * rate);
-
-  if (
-    !code ||
-    !Number.isFinite(amount) ||
-    amount <= 0 ||
-    !Number.isFinite(rate) ||
-    rate <= 0
-  ) {
-    throw new Error("Некорректные параметры валютной сделки.");
-  }
-
-  const normalizedCode = code.trim().toUpperCase();
-
-  if (!isActiveFxCurrencyCode(normalizedCode)) {
-    throw new Error("Эта валюта больше недоступна для торгов.");
-  }
-  assertBrokerageCurrency(normalizedCode);
-
-  const portfolio = await runSerializableTransaction(prisma, async (tx) => {
-    const currentPortfolio = await upsertPortfolioRecord(tx, userId);
-    const [rubBalance, currencyBalance] = await Promise.all([
-      getBrokerageCashBalance(tx, {
-        currency: "RUB",
-        portfolioId: currentPortfolio.id,
-      }),
-      getBrokerageCashBalance(tx, {
-        currency: normalizedCode,
-        portfolioId: currentPortfolio.id,
-      }),
-    ]);
-    const currentQuantity = toNumber(currencyBalance.balance);
-    const currentAverageRate = toNumber(currencyBalance.averageRate);
-
-    if (side === "buy") {
-      const rubAmount = amount;
-      const totalCost = rubAmount + fee;
-      const fxQuantity = amount / rate;
-
-      if (toNumber(rubBalance.balance) + Number.EPSILON < totalCost) {
-        throw new Error("Недостаточно рублей для покупки валюты.");
-      }
-
-      const nextQuantity = currentQuantity + fxQuantity;
-      const nextAverageRate =
-        nextQuantity > 0
-          ? (currentAverageRate * currentQuantity + rubAmount) / nextQuantity
-          : rate;
-
-      await Promise.all([
-        tx.brokerageCashBalance.update({
-          where: { id: currencyBalance.id },
-          data: {
-            averageRate: toDecimal(nextAverageRate),
-            balance: toDecimal(nextQuantity),
-          },
-        }),
-        tx.brokerageCashBalance.update({
-          where: { id: rubBalance.id },
-          data: {
-            balance: {
-              decrement: toDecimal(totalCost),
-            },
-          },
-        }),
-        tx.portfolio.update({
-          where: { id: currentPortfolio.id },
-          data: {
-            cashBalance: {
-              decrement: toDecimal(totalCost),
-            },
-          },
-        }),
-      ]);
-
-      await tx.portfolioTransaction.create({
-        data: {
-          portfolioId: currentPortfolio.id,
-          type: "FX_BUY",
-          currencyCode: normalizedCode,
-          quantity: toDecimal(fxQuantity),
-          price: toDecimal(rate),
-          amount: toDecimal(rubAmount),
-          feeAmount: toDecimal(fee),
-        },
-      });
-    } else {
-      const fxQuantity = amount;
-      const rubAmount = amount * rate;
-      const netRubAmount = rubAmount - fee;
-
-      if (currentQuantity + Number.EPSILON < fxQuantity) {
-        throw new Error("Недостаточно валюты для продажи.");
-      }
-
-      if (netRubAmount < 0) {
-        throw new Error("Комиссия не может быть больше суммы валютной сделки.");
-      }
-
-      const nextQuantity = currentQuantity - fxQuantity;
-
-      await Promise.all([
-        tx.brokerageCashBalance.update({
-          where: { id: currencyBalance.id },
-          data: {
-            averageRate:
-              nextQuantity <= POSITION_EPSILON
-                ? null
-                : currencyBalance.averageRate,
-            balance: toDecimal(Math.max(0, nextQuantity)),
-          },
-        }),
-        tx.brokerageCashBalance.update({
-          where: { id: rubBalance.id },
-          data: {
-            balance: {
-              increment: toDecimal(netRubAmount),
-            },
-          },
-        }),
-        tx.portfolio.update({
-          where: { id: currentPortfolio.id },
-          data: {
-            cashBalance: {
-              increment: toDecimal(netRubAmount),
-            },
-          },
-        }),
-      ]);
-
-      await tx.portfolioTransaction.create({
-        data: {
-          portfolioId: currentPortfolio.id,
-          type: "FX_SELL",
-          currencyCode: normalizedCode,
-          quantity: toDecimal(fxQuantity),
-          price: toDecimal(rate),
-          amount: toDecimal(rubAmount),
-          feeAmount: toDecimal(fee),
-        },
-      });
-    }
 
     return tx.portfolio.findUniqueOrThrow({
       where: { id: currentPortfolio.id },

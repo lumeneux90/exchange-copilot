@@ -4,10 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  acceptFinancialOrderAction,
-  cancelFinancialOrderAction,
-} from "@/src/features/finance/model/actions";
+import { cancelFinancialOrderAction } from "@/src/features/finance/model/actions";
 import { notifyFinanceRefresh } from "@/src/features/finance/model/finance-context";
 import type {
   FinanceState,
@@ -23,19 +20,19 @@ export function OrderActionButtons({
   order: FinancialOrderItem;
 }) {
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
-  const isAvailableOpen =
-    order.status === "OPEN" && order.relation === "available";
-  const isOwnOpen = order.status === "OPEN" && order.relation === "own";
+  const isOwnOpen =
+    (order.status === "OPEN" || order.status === "PARTIALLY_FILLED") &&
+    order.relation === "own";
 
-  function runAction(action: "accept" | "cancel") {
-    setPendingAction(action);
+  function runCancel() {
+    setPendingAction("cancel");
 
     React.startTransition(async () => {
       try {
-        const result =
-          action === "accept"
-            ? await acceptFinancialOrderAction(order.id)
-            : await cancelFinancialOrderAction(order.id);
+        const result = await cancelFinancialOrderAction(
+          order.id,
+          `${order.asset}/${order.quoteAsset}`
+        );
 
         if (!result.ok) {
           toast.error(result.error);
@@ -53,28 +50,13 @@ export function OrderActionButtons({
     });
   }
 
-  if (isAvailableOpen) {
-    return (
-      <div className="flex justify-end">
-        <Button
-          size="sm"
-          className="bg-chart-3 text-primary-foreground hover:bg-chart-1/80"
-          onClick={() => runAction("accept")}
-          disabled={pendingAction !== null}
-        >
-          Принять
-        </Button>
-      </div>
-    );
-  }
-
   if (isOwnOpen) {
     return (
       <div className="flex justify-end">
         <Button
           size="sm"
           variant="destructive"
-          onClick={() => runAction("cancel")}
+          onClick={runCancel}
           disabled={pendingAction !== null}
         >
           Отменить

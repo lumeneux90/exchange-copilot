@@ -7,7 +7,6 @@ import type { Stock } from "@/src/entities/stock/model/types";
 import {
   depositFundsAction,
   getPortfolioStateAction,
-  tradeCurrencyAction,
   tradeStockAction,
   withdrawFundsAction,
 } from "@/src/features/portfolio/model/actions";
@@ -32,12 +31,6 @@ type PortfolioContextValue = {
     amount: number,
     currency?: PortfolioTransferCurrency
   ) => Promise<void>;
-  tradeCurrency: (params: {
-    code: string;
-    side: "buy" | "sell";
-    amount: number;
-    quotedRate: number;
-  }) => Promise<void>;
   tradeStock: (params: {
     ticker: string;
     side: "buy" | "sell";
@@ -253,51 +246,6 @@ export function PortfolioProvider({
     []
   );
 
-  const tradeCurrency = React.useCallback(
-    async ({
-      amount,
-      code,
-      side,
-      quotedRate,
-    }: {
-      amount: number;
-      code: string;
-      side: "buy" | "sell";
-      quotedRate: number;
-    }) => {
-      if (
-        !code ||
-        !Number.isFinite(amount) ||
-        amount <= 0 ||
-        !Number.isFinite(quotedRate) ||
-        quotedRate <= 0
-      ) {
-        throw new Error("Некорректные параметры валютной сделки.");
-      }
-
-      setIsPending(true);
-
-      try {
-        const result = await tradeCurrencyAction({
-          amount,
-          code,
-          quotedRate,
-          side,
-        });
-
-        if (!result.ok) {
-          throw new Error(result.error);
-        }
-
-        setPortfolio(result.portfolio);
-        notifyFinanceRefresh();
-      } finally {
-        setIsPending(false);
-      }
-    },
-    []
-  );
-
   const tradeStock = React.useCallback(
     async ({
       quotedPrice,
@@ -350,7 +298,6 @@ export function PortfolioProvider({
       isPending,
       refreshPortfolio,
       depositFunds,
-      tradeCurrency,
       tradeStock,
       withdrawFunds,
     }),
@@ -359,7 +306,6 @@ export function PortfolioProvider({
       isPending,
       portfolio,
       refreshPortfolio,
-      tradeCurrency,
       tradeStock,
       withdrawFunds,
     ]

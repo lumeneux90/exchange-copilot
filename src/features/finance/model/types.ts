@@ -1,4 +1,14 @@
-export type FinanceAsset = "RUB" | "USD" | "XCP";
+export type FinanceAsset = "RUB" | "USD" | "EUR" | "CNY" | "XCP";
+
+export type FinancialMarketPairItem = {
+  amountPrecision: number;
+  baseAsset: FinanceAsset;
+  id: string;
+  label: string;
+  pricePrecision: number;
+  quoteAsset: FinanceAsset;
+  symbol: string;
+};
 
 export type FinancialCardDetails = {
   cvvLabel: string;
@@ -14,9 +24,16 @@ export type FinancialAccountItem = {
   card: FinancialCardDetails;
   displayNumber: string;
   id: string;
+  lockedBalance: number;
 };
 
-export type FinancialOrderStatus = "OPEN" | "ACCEPTED" | "CANCELLED";
+export type FinancialOrderSide = "BUY" | "SELL";
+
+export type FinancialOrderStatus =
+  | "OPEN"
+  | "PARTIALLY_FILLED"
+  | "ACCEPTED"
+  | "CANCELLED";
 
 export type FinancialOrderItem = {
   acceptedAt: string | null;
@@ -25,21 +42,44 @@ export type FinancialOrderItem = {
   asset: FinanceAsset;
   createdAt: string;
   creatorLogin: string;
+  filledAmount: number;
   id: string;
+  pairId: string | null;
+  price: number;
+  quoteAsset: FinanceAsset;
   relation: "own" | "available" | "accepted";
+  side: FinancialOrderSide;
   status: FinancialOrderStatus;
+};
+
+export type FinancialTradeItem = {
+  amount: number;
+  asset: FinanceAsset;
+  executedAt: string;
+  id: string;
+  pairId: string | null;
+  price: number;
+  quoteAmount: number;
+  quoteAsset: FinanceAsset;
+  side: "buy" | "sell";
 };
 
 export type FinanceState = {
   accounts: FinancialAccountItem[];
   currentUserLogin: string;
+  marketPairs: FinancialMarketPairItem[];
   orders: FinancialOrderItem[];
+  selectedPairSymbol: string;
+  trades: FinancialTradeItem[];
 };
 
 export function emptyFinanceState(): FinanceState {
   return {
     accounts: [],
     currentUserLogin: "",
+    marketPairs: [],
     orders: [],
+    selectedPairSymbol: "XCP/RUB",
+    trades: [],
   };
 }

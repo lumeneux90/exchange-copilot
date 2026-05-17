@@ -20,8 +20,18 @@ const counterpartyPassword =
   process.env.SEED_COUNTERPARTY_PASSWORD ?? "analyst12345";
 
 type FinancialAccountSeed = {
-  asset: "RUB" | "USD" | "XCP";
+  asset: "RUB" | "USD" | "EUR" | "CNY" | "XCP";
   balance: number;
+};
+
+type FinancialMarketPairSeed = {
+  amountPrecision: number;
+  baseAsset: FinancialAccountSeed["asset"];
+  label: string;
+  pricePrecision: number;
+  quoteAsset: FinancialAccountSeed["asset"];
+  sortOrder: number;
+  symbol: string;
 };
 
 type BrokerageCashBalanceSeed = {
@@ -40,6 +50,14 @@ const financialAccountSeeds = [
     balance: 3_000,
   },
   {
+    asset: "EUR",
+    balance: 1_500,
+  },
+  {
+    asset: "CNY",
+    balance: 12_000,
+  },
+  {
     asset: "XCP",
     balance: 500,
   },
@@ -55,10 +73,84 @@ const counterpartyFinancialAccountSeeds = [
     balance: 3_000,
   },
   {
+    asset: "EUR",
+    balance: 1_500,
+  },
+  {
+    asset: "CNY",
+    balance: 12_000,
+  },
+  {
     asset: "XCP",
     balance: 300,
   },
 ] satisfies FinancialAccountSeed[];
+
+const financialMarketPairSeeds = [
+  {
+    amountPrecision: 2,
+    baseAsset: "XCP",
+    label: "XCP/RUB",
+    pricePrecision: 2,
+    quoteAsset: "RUB",
+    sortOrder: 10,
+    symbol: "XCP/RUB",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "USD",
+    label: "USD/RUB",
+    pricePrecision: 4,
+    quoteAsset: "RUB",
+    sortOrder: 20,
+    symbol: "USD/RUB",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "XCP",
+    label: "XCP/USD",
+    pricePrecision: 4,
+    quoteAsset: "USD",
+    sortOrder: 25,
+    symbol: "XCP/USD",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "EUR",
+    label: "EUR/RUB",
+    pricePrecision: 4,
+    quoteAsset: "RUB",
+    sortOrder: 30,
+    symbol: "EUR/RUB",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "EUR",
+    label: "EUR/USD",
+    pricePrecision: 5,
+    quoteAsset: "USD",
+    sortOrder: 35,
+    symbol: "EUR/USD",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "CNY",
+    label: "CNY/RUB",
+    pricePrecision: 4,
+    quoteAsset: "RUB",
+    sortOrder: 40,
+    symbol: "CNY/RUB",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "CNY",
+    label: "CNY/USD",
+    pricePrecision: 5,
+    quoteAsset: "USD",
+    sortOrder: 45,
+    symbol: "CNY/USD",
+  },
+] satisfies FinancialMarketPairSeed[];
 
 function decimal(value: number) {
   return new Prisma.Decimal(value.toFixed(8));
@@ -79,15 +171,70 @@ async function upsertFinancialAccounts(
         },
         update: {
           balance: decimal(account.balance),
+          lockedBalance: decimal(0),
         },
         create: {
           asset: account.asset,
           balance: decimal(account.balance),
+          lockedBalance: decimal(0),
           userId,
         },
       })
     )
   );
+}
+
+async function upsertFinancialMarketPairs() {
+  const pairs = await Promise.all(
+    financialMarketPairSeeds.map((pair) =>
+      prisma.financialMarketPair.upsert({
+        where: { symbol: pair.symbol },
+        update: {
+          amountPrecision: pair.amountPrecision,
+          baseAsset: pair.baseAsset,
+          enabled: true,
+          label: pair.label,
+          pricePrecision: pair.pricePrecision,
+          quoteAsset: pair.quoteAsset,
+          sortOrder: pair.sortOrder,
+        },
+        create: {
+          amountPrecision: pair.amountPrecision,
+          baseAsset: pair.baseAsset,
+          label: pair.label,
+          pricePrecision: pair.pricePrecision,
+          quoteAsset: pair.quoteAsset,
+          sortOrder: pair.sortOrder,
+          symbol: pair.symbol,
+        },
+      })
+    )
+  );
+
+  return new Map(pairs.map((pair) => [pair.symbol, pair]));
+}
+
+async function lockFinancialAccount(params: {
+  amount: number;
+  asset: FinancialAccountSeed["asset"];
+  userId: string;
+}) {
+  await prisma.financialAccount.update({
+    where: {
+      userId_asset: {
+        asset: params.asset,
+        userId: params.userId,
+      },
+    },
+    data: {
+      balance: {
+        decrement: decimal(params.amount),
+      },
+      lockedBalance: {
+        increment: decimal(params.amount),
+      },
+    },
+  });
 }
 
 async function main() {
@@ -125,6 +272,37 @@ async function main() {
       ],
     },
   });
+  await prisma.financialTrade.deleteMany({
+    where: {
+      OR: [
+        { buyerUserId: user.id },
+        { sellerUserId: user.id },
+        { buyerUserId: counterpartyUser.id },
+        { sellerUserId: counterpartyUser.id },
+      ],
+    },
+  });
+
+  const marketPairs = await upsertFinancialMarketPairs();
+  const xcpRubPair = marketPairs.get("XCP/RUB");
+  const usdRubPair = marketPairs.get("USD/RUB");
+  const xcpUsdPair = marketPairs.get("XCP/USD");
+  const eurRubPair = marketPairs.get("EUR/RUB");
+  const eurUsdPair = marketPairs.get("EUR/USD");
+  const cnyRubPair = marketPairs.get("CNY/RUB");
+  const cnyUsdPair = marketPairs.get("CNY/USD");
+
+  if (
+    !xcpRubPair ||
+    !usdRubPair ||
+    !xcpUsdPair ||
+    !eurRubPair ||
+    !eurUsdPair ||
+    !cnyRubPair ||
+    !cnyUsdPair
+  ) {
+    throw new Error("Failed to seed financial market pairs.");
+  }
 
   await Promise.all([
     upsertFinancialAccounts(user.id, financialAccountSeeds),
@@ -137,31 +315,230 @@ async function main() {
   await prisma.financialOrder.createMany({
     data: [
       {
-        amount: decimal(12_500),
-        asset: "RUB",
+        amount: decimal(80),
+        asset: "XCP",
         creatorUserId: counterpartyUser.id,
+        pairId: xcpRubPair.id,
+        price: decimal(95),
+        quoteAsset: "RUB",
+        side: "BUY",
+      },
+      {
+        amount: decimal(30),
+        asset: "XCP",
+        creatorUserId: user.id,
+        pairId: xcpRubPair.id,
+        price: decimal(110),
+        quoteAsset: "RUB",
+        side: "SELL",
+      },
+      {
+        amount: decimal(500),
+        asset: "USD",
+        creatorUserId: counterpartyUser.id,
+        pairId: usdRubPair.id,
+        price: decimal(93.2),
+        quoteAsset: "RUB",
+        side: "SELL",
+      },
+      {
+        amount: decimal(200),
+        asset: "USD",
+        creatorUserId: user.id,
+        pairId: usdRubPair.id,
+        price: decimal(91.7),
+        quoteAsset: "RUB",
+        side: "BUY",
+      },
+      {
+        amount: decimal(300),
+        asset: "EUR",
+        creatorUserId: counterpartyUser.id,
+        pairId: eurRubPair.id,
+        price: decimal(101.8),
+        quoteAsset: "RUB",
+        side: "SELL",
+      },
+      {
+        amount: decimal(40),
+        asset: "XCP",
+        creatorUserId: counterpartyUser.id,
+        pairId: xcpUsdPair.id,
+        price: decimal(1.08),
+        quoteAsset: "USD",
+        side: "SELL",
+      },
+      {
+        amount: decimal(60),
+        asset: "XCP",
+        creatorUserId: user.id,
+        pairId: xcpUsdPair.id,
+        price: decimal(0.96),
+        quoteAsset: "USD",
+        side: "BUY",
+      },
+      {
+        amount: decimal(250),
+        asset: "EUR",
+        creatorUserId: counterpartyUser.id,
+        pairId: eurUsdPair.id,
+        price: decimal(1.095),
+        quoteAsset: "USD",
+        side: "SELL",
       },
       {
         amount: decimal(150),
-        asset: "USD",
+        asset: "EUR",
         creatorUserId: user.id,
+        pairId: eurUsdPair.id,
+        price: decimal(1.071),
+        quoteAsset: "USD",
+        side: "BUY",
+      },
+      {
+        amount: decimal(3_000),
+        asset: "CNY",
+        creatorUserId: user.id,
+        pairId: cnyRubPair.id,
+        price: decimal(12.65),
+        quoteAsset: "RUB",
+        side: "BUY",
+      },
+      {
+        amount: decimal(2_500),
+        asset: "CNY",
+        creatorUserId: counterpartyUser.id,
+        pairId: cnyRubPair.id,
+        price: decimal(12.9),
+        quoteAsset: "RUB",
+        side: "SELL",
+      },
+      {
+        amount: decimal(4_000),
+        asset: "CNY",
+        creatorUserId: counterpartyUser.id,
+        pairId: cnyUsdPair.id,
+        price: decimal(0.141),
+        quoteAsset: "USD",
+        side: "SELL",
+      },
+      {
+        amount: decimal(2_000),
+        asset: "CNY",
+        creatorUserId: user.id,
+        pairId: cnyUsdPair.id,
+        price: decimal(0.136),
+        quoteAsset: "USD",
+        side: "BUY",
       },
       {
         amount: decimal(25),
         asset: "XCP",
         creatorUserId: counterpartyUser.id,
+        filledAmount: decimal(25),
+        pairId: xcpRubPair.id,
+        price: decimal(100),
+        quoteAsset: "RUB",
+        side: "SELL",
         acceptedAt: new Date("2026-04-02T10:00:00.000Z"),
         acceptedByUserId: user.id,
         status: "ACCEPTED",
       },
       {
-        amount: decimal(3_000),
-        asset: "RUB",
+        amount: decimal(20),
+        asset: "XCP",
         creatorUserId: user.id,
+        pairId: xcpRubPair.id,
+        price: decimal(120),
+        quoteAsset: "RUB",
+        side: "BUY",
         status: "CANCELLED",
       },
     ],
   });
+
+  await prisma.financialTrade.create({
+    data: {
+      amount: decimal(25),
+      asset: "XCP",
+      buyOrderId: "seed-buy-xcp-rub",
+      buyerUserId: user.id,
+      pairId: xcpRubPair.id,
+      price: decimal(100),
+      quoteAmount: decimal(2_500),
+      quoteAsset: "RUB",
+      sellOrderId: "seed-sell-xcp-rub",
+      sellerUserId: counterpartyUser.id,
+    },
+  });
+
+  await Promise.all([
+    lockFinancialAccount({
+      amount: 7_600,
+      asset: "RUB",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 30,
+      asset: "XCP",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 500,
+      asset: "USD",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 18_340,
+      asset: "RUB",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 300,
+      asset: "EUR",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 40,
+      asset: "XCP",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 57.6,
+      asset: "USD",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 250,
+      asset: "EUR",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 160.65,
+      asset: "USD",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 37_950,
+      asset: "RUB",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 2_500,
+      asset: "CNY",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 4_000,
+      asset: "CNY",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 272,
+      asset: "USD",
+      userId: user.id,
+    }),
+  ]);
 
   const portfolio = await prisma.portfolio.upsert({
     where: { userId: user.id },
@@ -227,11 +604,6 @@ async function main() {
       balance: 320,
       averageRate: 91.4,
     },
-    {
-      currency: "CNY",
-      balance: 1800,
-      averageRate: 12.55,
-    },
   ] satisfies BrokerageCashBalanceSeed[];
 
   const transactionSeeds = [
@@ -278,28 +650,6 @@ async function main() {
       amount: decimal(8073.6),
       feeAmount: decimal(15),
       executedAt: new Date("2026-03-28T12:00:00.000Z"),
-    },
-    {
-      portfolioId: portfolio.id,
-      type: "FX_BUY",
-      ticker: null,
-      currencyCode: "USD",
-      quantity: decimal(320),
-      price: decimal(91.4),
-      amount: decimal(29248),
-      feeAmount: decimal(30),
-      executedAt: new Date("2026-03-29T09:15:00.000Z"),
-    },
-    {
-      portfolioId: portfolio.id,
-      type: "FX_BUY",
-      ticker: null,
-      currencyCode: "CNY",
-      quantity: decimal(1800),
-      price: decimal(12.55),
-      amount: decimal(22590),
-      feeAmount: decimal(25),
-      executedAt: new Date("2026-03-30T10:20:00.000Z"),
     },
     {
       portfolioId: portfolio.id,

@@ -16,6 +16,18 @@ const currencyFormatters: Record<FinanceAsset, Intl.NumberFormat> = {
     minimumFractionDigits: 2,
     style: "currency",
   }),
+  EUR: new Intl.NumberFormat("ru-RU", {
+    currency: "EUR",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    style: "currency",
+  }),
+  CNY: new Intl.NumberFormat("ru-RU", {
+    currency: "CNY",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    style: "currency",
+  }),
   XCP: new Intl.NumberFormat("ru-RU", {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
@@ -43,6 +55,8 @@ export function getStatusLabel(status: FinancialOrderItem["status"]) {
   switch (status) {
     case "OPEN":
       return "Открыт";
+    case "PARTIALLY_FILLED":
+      return "Частично";
     case "ACCEPTED":
       return "Исполнен";
     case "CANCELLED":
@@ -54,6 +68,8 @@ export function getStatusBadgeVariant(status: FinancialOrderItem["status"]) {
   switch (status) {
     case "OPEN":
       return "outline";
+    case "PARTIALLY_FILLED":
+      return "secondary";
     case "ACCEPTED":
       return "default";
     case "CANCELLED":
@@ -63,4 +79,8 @@ export function getStatusBadgeVariant(status: FinancialOrderItem["status"]) {
 
 export function formatOrderId(id: string) {
   return id.slice(-6).toUpperCase();
+}
+
+export function formatOrderSide(side: FinancialOrderItem["side"]) {
+  return side === "BUY" ? "Покупка" : "Продажа";
 }

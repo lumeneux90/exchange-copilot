@@ -1,6 +1,6 @@
 export type PortfolioHistoryItem = {
   id: string;
-  type: "DEPOSIT" | "WITHDRAWAL" | "BUY" | "SELL" | "FX_BUY" | "FX_SELL";
+  type: "DEPOSIT" | "WITHDRAWAL" | "BUY" | "SELL";
   ticker: string | null;
   currencyCode: string | null;
   quantity: number | null;

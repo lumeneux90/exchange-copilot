@@ -41,8 +41,6 @@ const transactionTypeLabels: Record<PortfolioHistoryItem["type"], string> = {
   WITHDRAWAL: "Вывод",
   BUY: "Покупка",
   SELL: "Продажа",
-  FX_BUY: "Покупка валюты",
-  FX_SELL: "Продажа валюты",
 };
 
 const transactionTypeVariants: Record<
@@ -53,8 +51,6 @@ const transactionTypeVariants: Record<
   WITHDRAWAL: "outline",
   BUY: "secondary",
   SELL: "destructive",
-  FX_BUY: "secondary",
-  FX_SELL: "destructive",
 };
 
 const transactionTypeClassNames: Record<PortfolioHistoryItem["type"], string> =
@@ -65,10 +61,6 @@ const transactionTypeClassNames: Record<PortfolioHistoryItem["type"], string> =
       "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300",
     BUY: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300",
     SELL: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-300",
-    FX_BUY:
-      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300",
-    FX_SELL:
-      "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700 dark:border-fuchsia-900/60 dark:bg-fuchsia-950/40 dark:text-fuchsia-300",
   };
 
 function formatExecutedAt(value: string) {
@@ -115,10 +107,8 @@ function getCashMovement(item: PortfolioHistoryItem) {
     case "WITHDRAWAL":
       return -item.amount;
     case "BUY":
-    case "FX_BUY":
       return -(item.amount + item.feeAmount);
     case "SELL":
-    case "FX_SELL":
       return item.amount - item.feeAmount;
   }
 }

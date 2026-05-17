@@ -3,7 +3,6 @@
 import {
   depositFunds,
   getPortfolioState,
-  tradeCurrency,
   tradeStock,
   withdrawFunds,
 } from "@/src/features/portfolio/model/portfolio-server";
@@ -84,17 +83,6 @@ async function getCurrentCurrencyRate(code: string) {
   return currencyRate.price;
 }
 
-async function getExecutionCurrencyRate(code: string, quotedRate: number) {
-  const price = await getCurrentCurrencyRate(code);
-
-  assertQuoteWithinTolerance({
-    executionValue: price,
-    quotedValue: quotedRate,
-  });
-
-  return price;
-}
-
 export async function getPortfolioStateAction() {
   const userId = await requireCurrentUserId();
 
@@ -152,35 +140,6 @@ export async function withdrawFundsAction(
     return {
       ok: false,
       error: getErrorMessage(error, "Не удалось вывести средства."),
-    } satisfies PortfolioActionResult;
-  }
-}
-
-export async function tradeCurrencyAction(params: {
-  code: string;
-  side: "buy" | "sell";
-  amount: number;
-  quotedRate: number;
-}) {
-  try {
-    const userId = await requireCurrentUserId();
-    const rate = await getExecutionCurrencyRate(params.code, params.quotedRate);
-    const portfolio = await tradeCurrency({
-      userId,
-      amount: params.amount,
-      code: params.code,
-      rate,
-      side: params.side,
-    });
-
-    return {
-      ok: true,
-      portfolio,
-    } satisfies PortfolioActionResult;
-  } catch (error) {
-    return {
-      ok: false,
-      error: getErrorMessage(error, "Не удалось выполнить валютную сделку."),
     } satisfies PortfolioActionResult;
   }
 }

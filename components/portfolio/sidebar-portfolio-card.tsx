@@ -27,17 +27,17 @@ import {
 import { cn } from "@/src/lib/utils";
 
 const allocationChartConfig = {
-  cash: {
-    label: "Свободные деньги",
+  rub: {
+    label: "Рубли",
     color: "var(--ring)",
+  },
+  usd: {
+    label: "Доллары",
+    color: "var(--chart-2)",
   },
   stocks: {
     label: "Акции",
     color: "var(--primary)",
-  },
-  fx: {
-    label: "Валюта",
-    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
@@ -58,9 +58,9 @@ export function SidebarPortfolioCard({
         : "text-muted-foreground";
   const totalValue = snapshot.totalValue || 0;
   const segmentValues = {
-    cash: snapshot.cashBalance,
+    rub: snapshot.cashBalance,
+    usd: snapshot.currenciesMarketValue,
     stocks: snapshot.marketValue,
-    fx: snapshot.currenciesMarketValue,
   } as const;
   const visibleSegmentKeys = (
     Object.entries(segmentValues) as Array<[keyof typeof segmentValues, number]>
@@ -94,16 +94,23 @@ export function SidebarPortfolioCard({
 
     return [0, 0, 0, 0];
   };
-  const cashRadius = getSegmentRadius("cash");
+  const cashRadius = getSegmentRadius("rub");
   const stocksRadius = getSegmentRadius("stocks");
-  const fxRadius = getSegmentRadius("fx");
+  const fxRadius = getSegmentRadius("usd");
   const allocationSegments = [
     {
-      chartKey: "cash",
-      color: allocationChartConfig.cash.color,
-      label: "Свободные деньги",
+      chartKey: "rub",
+      color: allocationChartConfig.rub.color,
+      label: "Рубли",
       share: totalValue > 0 ? snapshot.cashBalance / totalValue : 0,
       value: snapshot.cashBalance,
+    },
+    {
+      chartKey: "usd",
+      color: allocationChartConfig.usd.color,
+      label: "Доллары",
+      share: totalValue > 0 ? snapshot.currenciesMarketValue / totalValue : 0,
+      value: snapshot.currenciesMarketValue,
     },
     {
       chartKey: "stocks",
@@ -112,20 +119,13 @@ export function SidebarPortfolioCard({
       share: totalValue > 0 ? snapshot.marketValue / totalValue : 0,
       value: snapshot.marketValue,
     },
-    {
-      chartKey: "fx",
-      color: allocationChartConfig.fx.color,
-      label: "Валюта",
-      share: totalValue > 0 ? snapshot.currenciesMarketValue / totalValue : 0,
-      value: snapshot.currenciesMarketValue,
-    },
   ];
   const allocationChartData = [
     {
       allocation: "portfolio",
-      cash: snapshot.cashBalance,
+      rub: snapshot.cashBalance,
+      usd: snapshot.currenciesMarketValue,
       stocks: snapshot.marketValue,
-      fx: snapshot.currenciesMarketValue,
     },
   ];
 
@@ -166,10 +166,17 @@ export function SidebarPortfolioCard({
                   <XAxis type="number" hide domain={[0, totalValue]} />
                   <YAxis type="category" dataKey="allocation" hide />
                   <Bar
-                    dataKey="cash"
+                    dataKey="rub"
                     stackId="allocation"
-                    fill="var(--color-cash)"
+                    fill="var(--color-rub)"
                     radius={cashRadius}
+                    isAnimationActive={false}
+                  />
+                  <Bar
+                    dataKey="usd"
+                    stackId="allocation"
+                    fill="var(--color-usd)"
+                    radius={fxRadius}
                     isAnimationActive={false}
                   />
                   <Bar
@@ -177,13 +184,6 @@ export function SidebarPortfolioCard({
                     stackId="allocation"
                     fill="var(--color-stocks)"
                     radius={stocksRadius}
-                    isAnimationActive={false}
-                  />
-                  <Bar
-                    dataKey="fx"
-                    stackId="allocation"
-                    fill="var(--color-fx)"
-                    radius={fxRadius}
                     isAnimationActive={false}
                   />
                 </BarChart>

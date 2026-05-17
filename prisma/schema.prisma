@@ -42,8 +42,6 @@ enum PortfolioTransactionType {
   WITHDRAWAL
   BUY
   SELL
-  FX_BUY
-  FX_SELL
 }
 
 enum BrokerageCurrency {
@@ -124,43 +122,101 @@ model PortfolioTransaction {
 enum FinancialAsset {
   RUB
   USD
+  EUR
+  CNY
   XCP
 }
 
 enum FinancialOrderStatus {
   OPEN
+  PARTIALLY_FILLED
   ACCEPTED
   CANCELLED
 }
 
+enum FinancialOrderSide {
+  BUY
+  SELL
+}
+
 model FinancialAccount {
-  id        String         @id @default(cuid())
-  userId    String         @map("user_id")
-  asset     FinancialAsset
-  balance   Decimal        @default(0) @db.Decimal(20, 8)
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String         @id @default(cuid())
+  userId        String         @map("user_id")
+  asset         FinancialAsset
+  balance       Decimal        @default(0) @db.Decimal(20, 8)
+  lockedBalance Decimal        @default(0) @map("locked_balance") @db.Decimal(20, 8)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, asset])
   @@map("financial_accounts")
 }
 
+model FinancialMarketPair {
+  id              String          @id @default(cuid())
+  symbol          String          @unique
+  baseAsset       FinancialAsset  @map("base_asset")
+  quoteAsset      FinancialAsset  @map("quote_asset")
+  label           String
+  enabled         Boolean         @default(true)
+  pricePrecision  Int             @default(2) @map("price_precision")
+  amountPrecision Int             @default(2) @map("amount_precision")
+  sortOrder       Int             @default(0) @map("sort_order")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  orders          FinancialOrder[]
+  trades          FinancialTrade[]
+
+  @@index([enabled, sortOrder])
+  @@map("financial_market_pairs")
+}
+
 model FinancialOrder {
   id               String               @id @default(cuid())
+  pairId           String?              @map("pair_id")
   creatorUserId    String               @map("creator_user_id")
   acceptedByUserId String?              @map("accepted_by_user_id")
   asset            FinancialAsset
+  quoteAsset       FinancialAsset       @default(RUB) @map("quote_asset")
+  side             FinancialOrderSide   @default(SELL)
   amount           Decimal              @db.Decimal(20, 8)
+  filledAmount     Decimal              @default(0) @map("filled_amount") @db.Decimal(20, 8)
+  price            Decimal              @default(1) @db.Decimal(20, 8)
   status           FinancialOrderStatus @default(OPEN)
   acceptedAt       DateTime?            @map("accepted_at")
   createdAt        DateTime             @default(now()) @map("created_at")
   updatedAt        DateTime             @updatedAt @map("updated_at")
+  pair             FinancialMarketPair? @relation(fields: [pairId], references: [id], onDelete: SetNull)
   creator          User                 @relation("FinancialOrdersCreated", fields: [creatorUserId], references: [id], onDelete: Cascade)
   acceptedBy       User?                @relation("FinancialOrdersAccepted", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
 
+  @@index([pairId, side, status, price, createdAt])
   @@index([creatorUserId, createdAt(sort: Desc)])
   @@index([acceptedByUserId, createdAt(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
+  @@index([asset, quoteAsset, side, status, price, createdAt], map: "financial_orders_asset_quote_asset_side_status_price_created_at")
   @@map("financial_orders")
+}
+
+model FinancialTrade {
+  id          String         @id @default(cuid())
+  pairId      String?        @map("pair_id")
+  buyOrderId  String         @map("buy_order_id")
+  sellOrderId String         @map("sell_order_id")
+  buyerUserId String         @map("buyer_user_id")
+  sellerUserId String        @map("seller_user_id")
+  asset       FinancialAsset
+  quoteAsset  FinancialAsset @map("quote_asset")
+  amount      Decimal        @db.Decimal(20, 8)
+  price       Decimal        @db.Decimal(20, 8)
+  quoteAmount Decimal        @map("quote_amount") @db.Decimal(20, 8)
+  executedAt  DateTime       @default(now()) @map("executed_at")
+  pair        FinancialMarketPair? @relation(fields: [pairId], references: [id], onDelete: SetNull)
+
+  @@index([pairId, executedAt(sort: Desc)])
+  @@index([asset, quoteAsset, executedAt(sort: Desc)])
+  @@index([buyerUserId, executedAt(sort: Desc)])
+  @@index([sellerUserId, executedAt(sort: Desc)])
+  @@map("financial_trades")
 }

@@ -3,6 +3,7 @@ import {
   formatAssetAmount,
   formatOrderDate,
   formatOrderId,
+  formatOrderSide,
   getStatusBadgeVariant,
   getStatusLabel,
 } from "@/components/finance/finance-formatters";
@@ -42,7 +43,11 @@ export function MobileOrderCard({
           </div>
         </div>
         <div className="text-right text-sm font-semibold tabular-nums">
-          {formatAssetAmount(order.amount, order.asset)}
+          <div>{formatOrderSide(order.side)}</div>
+          <div>{formatAssetAmount(order.amount, order.asset)}</div>
+          <div className="text-muted-foreground text-xs font-normal">
+            {formatAssetAmount(order.price, order.quoteAsset)}
+          </div>
         </div>
       </div>
 
