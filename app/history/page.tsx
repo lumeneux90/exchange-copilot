@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/empty";
 import { getPortfolioHistoryPage } from "@/src/features/portfolio/model/portfolio-server";
 import type { PortfolioHistoryPage } from "@/src/features/portfolio/model/history";
-import { getCurrencyRates } from "@/src/entities/market/api/get-currency-rates";
+import { getUsdRubReferenceRate } from "@/src/features/finance/model/finance-server";
 import { getStocks } from "@/src/entities/stock/api/get-stocks";
 import { getCurrentUser } from "@/src/lib/session";
 import { RiTimeLine } from "@remixicon/react";
@@ -44,9 +44,9 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const resolvedSearchParams = await searchParams;
   const page = getPageParam(resolvedSearchParams?.page);
   const user = await getCurrentUser();
-  const [stocks, currencyRates, historyPage] = await Promise.all([
+  const [stocks, usdRubRate, historyPage] = await Promise.all([
     getStocks(),
-    getCurrencyRates(),
+    getUsdRubReferenceRate(),
     user
       ? getPortfolioHistoryPage(user.id, {
           page,
@@ -56,11 +56,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   ]);
 
   return (
-    <DashboardShell
-      title="История"
-      currencyRates={currencyRates}
-      stocks={stocks}
-    >
+    <DashboardShell title="История" stocks={stocks} usdRubRate={usdRubRate}>
       <section className="px-4 lg:px-6">
         {historyPage.totalItems > 0 ? (
           <HistoryTable

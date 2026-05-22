@@ -20,7 +20,17 @@ const counterpartyPassword =
   process.env.SEED_COUNTERPARTY_PASSWORD ?? "analyst12345";
 
 type FinancialAccountSeed = {
-  asset: "RUB" | "USD" | "EUR" | "CNY" | "XCP";
+  asset:
+    | "RUB"
+    | "USD"
+    | "USDT"
+    | "XCP"
+    | "BTC"
+    | "ETH"
+    | "BNB"
+    | "SOL"
+    | "DOGE"
+    | "TON";
   balance: number;
 };
 
@@ -37,7 +47,7 @@ type FinancialMarketPairSeed = {
 type BrokerageCashBalanceSeed = {
   averageRate: number | null;
   balance: number;
-  currency: "RUB" | "USD" | "EUR" | "CNY";
+  currency: "RUB" | "USD";
 };
 
 const financialAccountSeeds = [
@@ -50,12 +60,32 @@ const financialAccountSeeds = [
     balance: 3_000,
   },
   {
-    asset: "EUR",
-    balance: 1_500,
+    asset: "USDT",
+    balance: 10_000,
   },
   {
-    asset: "CNY",
-    balance: 12_000,
+    asset: "BTC",
+    balance: 0.05,
+  },
+  {
+    asset: "ETH",
+    balance: 1,
+  },
+  {
+    asset: "BNB",
+    balance: 1.5,
+  },
+  {
+    asset: "SOL",
+    balance: 15,
+  },
+  {
+    asset: "DOGE",
+    balance: 5_000,
+  },
+  {
+    asset: "TON",
+    balance: 500,
   },
   {
     asset: "XCP",
@@ -73,12 +103,32 @@ const counterpartyFinancialAccountSeeds = [
     balance: 3_000,
   },
   {
-    asset: "EUR",
-    balance: 1_500,
+    asset: "USDT",
+    balance: 10_000,
   },
   {
-    asset: "CNY",
-    balance: 12_000,
+    asset: "BTC",
+    balance: 0.05,
+  },
+  {
+    asset: "ETH",
+    balance: 1,
+  },
+  {
+    asset: "BNB",
+    balance: 1.5,
+  },
+  {
+    asset: "SOL",
+    balance: 15,
+  },
+  {
+    asset: "DOGE",
+    balance: 5_000,
+  },
+  {
+    asset: "TON",
+    balance: 500,
   },
   {
     asset: "XCP",
@@ -89,21 +139,93 @@ const counterpartyFinancialAccountSeeds = [
 const financialMarketPairSeeds = [
   {
     amountPrecision: 2,
-    baseAsset: "XCP",
-    label: "XCP/RUB",
+    baseAsset: "USD",
+    label: "USD/RUB",
     pricePrecision: 2,
     quoteAsset: "RUB",
-    sortOrder: 10,
-    symbol: "XCP/RUB",
+    sortOrder: 1,
+    symbol: "USD/RUB",
   },
   {
     amountPrecision: 2,
     baseAsset: "USD",
-    label: "USD/RUB",
+    label: "USD/USDT",
     pricePrecision: 4,
-    quoteAsset: "RUB",
+    quoteAsset: "USDT",
+    sortOrder: 5,
+    symbol: "USD/USDT",
+  },
+  {
+    amountPrecision: 6,
+    baseAsset: "BTC",
+    label: "BTC/USDT",
+    pricePrecision: 2,
+    quoteAsset: "USDT",
+    sortOrder: 10,
+    symbol: "BTC/USDT",
+  },
+  {
+    amountPrecision: 5,
+    baseAsset: "ETH",
+    label: "ETH/USDT",
+    pricePrecision: 2,
+    quoteAsset: "USDT",
     sortOrder: 20,
-    symbol: "USD/RUB",
+    symbol: "ETH/USDT",
+  },
+  {
+    amountPrecision: 4,
+    baseAsset: "BNB",
+    label: "BNB/USDT",
+    pricePrecision: 2,
+    quoteAsset: "USDT",
+    sortOrder: 30,
+    symbol: "BNB/USDT",
+  },
+  {
+    amountPrecision: 3,
+    baseAsset: "SOL",
+    label: "SOL/USDT",
+    pricePrecision: 3,
+    quoteAsset: "USDT",
+    sortOrder: 40,
+    symbol: "SOL/USDT",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "DOGE",
+    label: "DOGE/USDT",
+    pricePrecision: 5,
+    quoteAsset: "USDT",
+    sortOrder: 60,
+    symbol: "DOGE/USDT",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "TON",
+    label: "TON/USDT",
+    pricePrecision: 4,
+    quoteAsset: "USDT",
+    sortOrder: 70,
+    symbol: "TON/USDT",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "XCP",
+    label: "XCP/USDT",
+    pricePrecision: 4,
+    quoteAsset: "USDT",
+    sortOrder: 80,
+    symbol: "XCP/USDT",
+  },
+  {
+    amountPrecision: 2,
+    baseAsset: "XCP",
+    label: "XCP/RUB",
+    pricePrecision: 2,
+    quoteAsset: "RUB",
+    sortOrder: 90,
+    symbol: "XCP/RUB",
   },
   {
     amountPrecision: 2,
@@ -111,44 +233,8 @@ const financialMarketPairSeeds = [
     label: "XCP/USD",
     pricePrecision: 4,
     quoteAsset: "USD",
-    sortOrder: 25,
+    sortOrder: 100,
     symbol: "XCP/USD",
-  },
-  {
-    amountPrecision: 2,
-    baseAsset: "EUR",
-    label: "EUR/RUB",
-    pricePrecision: 4,
-    quoteAsset: "RUB",
-    sortOrder: 30,
-    symbol: "EUR/RUB",
-  },
-  {
-    amountPrecision: 2,
-    baseAsset: "EUR",
-    label: "EUR/USD",
-    pricePrecision: 5,
-    quoteAsset: "USD",
-    sortOrder: 35,
-    symbol: "EUR/USD",
-  },
-  {
-    amountPrecision: 2,
-    baseAsset: "CNY",
-    label: "CNY/RUB",
-    pricePrecision: 4,
-    quoteAsset: "RUB",
-    sortOrder: 40,
-    symbol: "CNY/RUB",
-  },
-  {
-    amountPrecision: 2,
-    baseAsset: "CNY",
-    label: "CNY/USD",
-    pricePrecision: 5,
-    quoteAsset: "USD",
-    sortOrder: 45,
-    symbol: "CNY/USD",
   },
 ] satisfies FinancialMarketPairSeed[];
 
@@ -185,6 +271,19 @@ async function upsertFinancialAccounts(
 }
 
 async function upsertFinancialMarketPairs() {
+  const seedSymbols = financialMarketPairSeeds.map((pair) => pair.symbol);
+
+  await prisma.financialMarketPair.updateMany({
+    where: {
+      symbol: {
+        notIn: seedSymbols,
+      },
+    },
+    data: {
+      enabled: false,
+    },
+  });
+
   const pairs = await Promise.all(
     financialMarketPairSeeds.map((pair) =>
       prisma.financialMarketPair.upsert({
@@ -244,9 +343,11 @@ async function main() {
   const user = await prisma.user.upsert({
     where: { login },
     update: {
+      kind: "HUMAN",
       passwordHash,
     },
     create: {
+      kind: "HUMAN",
       login,
       passwordHash,
     },
@@ -254,9 +355,11 @@ async function main() {
   const counterpartyUser = await prisma.user.upsert({
     where: { login: counterpartyLogin },
     update: {
+      kind: "AI_AGENT",
       passwordHash: counterpartyPasswordHash,
     },
     create: {
+      kind: "AI_AGENT",
       login: counterpartyLogin,
       passwordHash: counterpartyPasswordHash,
     },
@@ -284,22 +387,28 @@ async function main() {
   });
 
   const marketPairs = await upsertFinancialMarketPairs();
-  const xcpRubPair = marketPairs.get("XCP/RUB");
   const usdRubPair = marketPairs.get("USD/RUB");
+  const usdUsdtPair = marketPairs.get("USD/USDT");
+  const btcUsdtPair = marketPairs.get("BTC/USDT");
+  const ethUsdtPair = marketPairs.get("ETH/USDT");
+  const solUsdtPair = marketPairs.get("SOL/USDT");
+  const dogeUsdtPair = marketPairs.get("DOGE/USDT");
+  const tonUsdtPair = marketPairs.get("TON/USDT");
+  const xcpUsdtPair = marketPairs.get("XCP/USDT");
+  const xcpRubPair = marketPairs.get("XCP/RUB");
   const xcpUsdPair = marketPairs.get("XCP/USD");
-  const eurRubPair = marketPairs.get("EUR/RUB");
-  const eurUsdPair = marketPairs.get("EUR/USD");
-  const cnyRubPair = marketPairs.get("CNY/RUB");
-  const cnyUsdPair = marketPairs.get("CNY/USD");
 
   if (
-    !xcpRubPair ||
     !usdRubPair ||
-    !xcpUsdPair ||
-    !eurRubPair ||
-    !eurUsdPair ||
-    !cnyRubPair ||
-    !cnyUsdPair
+    !usdUsdtPair ||
+    !btcUsdtPair ||
+    !ethUsdtPair ||
+    !solUsdtPair ||
+    !dogeUsdtPair ||
+    !tonUsdtPair ||
+    !xcpUsdtPair ||
+    !xcpRubPair ||
+    !xcpUsdPair
   ) {
     throw new Error("Failed to seed financial market pairs.");
   }
@@ -314,6 +423,150 @@ async function main() {
 
   await prisma.financialOrder.createMany({
     data: [
+      {
+        amount: decimal(500),
+        asset: "USD",
+        creatorUserId: counterpartyUser.id,
+        pairId: usdRubPair.id,
+        price: decimal(91.6),
+        quoteAsset: "RUB",
+        side: "SELL",
+      },
+      {
+        amount: decimal(300),
+        asset: "USD",
+        creatorUserId: user.id,
+        pairId: usdRubPair.id,
+        price: decimal(91.2),
+        quoteAsset: "RUB",
+        side: "BUY",
+      },
+      {
+        amount: decimal(2_500),
+        asset: "USDT",
+        creatorUserId: counterpartyUser.id,
+        pairId: usdUsdtPair.id,
+        price: decimal(1.002),
+        quoteAsset: "USDT",
+        side: "SELL",
+      },
+      {
+        amount: decimal(1_500),
+        asset: "USD",
+        creatorUserId: user.id,
+        pairId: usdUsdtPair.id,
+        price: decimal(0.998),
+        quoteAsset: "USDT",
+        side: "BUY",
+      },
+      {
+        amount: decimal(0.02),
+        asset: "BTC",
+        creatorUserId: counterpartyUser.id,
+        pairId: btcUsdtPair.id,
+        price: decimal(68_200),
+        quoteAsset: "USDT",
+        side: "SELL",
+      },
+      {
+        amount: decimal(0.015),
+        asset: "BTC",
+        creatorUserId: user.id,
+        pairId: btcUsdtPair.id,
+        price: decimal(67_650),
+        quoteAsset: "USDT",
+        side: "BUY",
+      },
+      {
+        amount: decimal(0.5),
+        asset: "ETH",
+        creatorUserId: counterpartyUser.id,
+        pairId: ethUsdtPair.id,
+        price: decimal(3_650),
+        quoteAsset: "USDT",
+        side: "SELL",
+      },
+      {
+        amount: decimal(0.4),
+        asset: "ETH",
+        creatorUserId: user.id,
+        pairId: ethUsdtPair.id,
+        price: decimal(3_590),
+        quoteAsset: "USDT",
+        side: "BUY",
+      },
+      {
+        amount: decimal(10),
+        asset: "SOL",
+        creatorUserId: counterpartyUser.id,
+        pairId: solUsdtPair.id,
+        price: decimal(172.5),
+        quoteAsset: "USDT",
+        side: "SELL",
+      },
+      {
+        amount: decimal(8),
+        asset: "SOL",
+        creatorUserId: user.id,
+        pairId: solUsdtPair.id,
+        price: decimal(168.2),
+        quoteAsset: "USDT",
+        side: "BUY",
+      },
+      {
+        amount: decimal(2_000),
+        asset: "DOGE",
+        creatorUserId: user.id,
+        pairId: dogeUsdtPair.id,
+        price: decimal(0.152),
+        quoteAsset: "USDT",
+        side: "BUY",
+      },
+      {
+        amount: decimal(1_500),
+        asset: "DOGE",
+        creatorUserId: counterpartyUser.id,
+        pairId: dogeUsdtPair.id,
+        price: decimal(0.158),
+        quoteAsset: "USDT",
+        side: "SELL",
+      },
+      {
+        amount: decimal(120),
+        asset: "TON",
+        creatorUserId: counterpartyUser.id,
+        pairId: tonUsdtPair.id,
+        price: decimal(3.85),
+        quoteAsset: "USDT",
+        side: "SELL",
+      },
+      {
+        amount: decimal(90),
+        asset: "TON",
+        creatorUserId: user.id,
+        pairId: tonUsdtPair.id,
+        price: decimal(3.72),
+        quoteAsset: "USDT",
+        side: "BUY",
+      },
+      {
+        amount: decimal(80),
+        asset: "XCP",
+        creatorUserId: counterpartyUser.id,
+        pairId: xcpUsdtPair.id,
+        price: decimal(0.95),
+        quoteAsset: "USDT",
+        side: "BUY",
+      },
+      {
+        amount: decimal(70),
+        asset: "XCP",
+        creatorUserId: user.id,
+        pairId: xcpUsdtPair.id,
+        price: decimal(1.08),
+        quoteAsset: "USDT",
+        side: "SELL",
+      },
       {
         amount: decimal(80),
         asset: "XCP",
@@ -333,33 +586,6 @@ async function main() {
         side: "SELL",
       },
       {
-        amount: decimal(500),
-        asset: "USD",
-        creatorUserId: counterpartyUser.id,
-        pairId: usdRubPair.id,
-        price: decimal(93.2),
-        quoteAsset: "RUB",
-        side: "SELL",
-      },
-      {
-        amount: decimal(200),
-        asset: "USD",
-        creatorUserId: user.id,
-        pairId: usdRubPair.id,
-        price: decimal(91.7),
-        quoteAsset: "RUB",
-        side: "BUY",
-      },
-      {
-        amount: decimal(300),
-        asset: "EUR",
-        creatorUserId: counterpartyUser.id,
-        pairId: eurRubPair.id,
-        price: decimal(101.8),
-        quoteAsset: "RUB",
-        side: "SELL",
-      },
-      {
         amount: decimal(40),
         asset: "XCP",
         creatorUserId: counterpartyUser.id,
@@ -374,60 +600,6 @@ async function main() {
         creatorUserId: user.id,
         pairId: xcpUsdPair.id,
         price: decimal(0.96),
-        quoteAsset: "USD",
-        side: "BUY",
-      },
-      {
-        amount: decimal(250),
-        asset: "EUR",
-        creatorUserId: counterpartyUser.id,
-        pairId: eurUsdPair.id,
-        price: decimal(1.095),
-        quoteAsset: "USD",
-        side: "SELL",
-      },
-      {
-        amount: decimal(150),
-        asset: "EUR",
-        creatorUserId: user.id,
-        pairId: eurUsdPair.id,
-        price: decimal(1.071),
-        quoteAsset: "USD",
-        side: "BUY",
-      },
-      {
-        amount: decimal(3_000),
-        asset: "CNY",
-        creatorUserId: user.id,
-        pairId: cnyRubPair.id,
-        price: decimal(12.65),
-        quoteAsset: "RUB",
-        side: "BUY",
-      },
-      {
-        amount: decimal(2_500),
-        asset: "CNY",
-        creatorUserId: counterpartyUser.id,
-        pairId: cnyRubPair.id,
-        price: decimal(12.9),
-        quoteAsset: "RUB",
-        side: "SELL",
-      },
-      {
-        amount: decimal(4_000),
-        asset: "CNY",
-        creatorUserId: counterpartyUser.id,
-        pairId: cnyUsdPair.id,
-        price: decimal(0.141),
-        quoteAsset: "USD",
-        side: "SELL",
-      },
-      {
-        amount: decimal(2_000),
-        asset: "CNY",
-        creatorUserId: user.id,
-        pairId: cnyUsdPair.id,
-        price: decimal(0.136),
         quoteAsset: "USD",
         side: "BUY",
       },
@@ -474,6 +646,76 @@ async function main() {
 
   await Promise.all([
     lockFinancialAccount({
+      amount: 2_500,
+      asset: "USDT",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 1_497,
+      asset: "USDT",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 0.02,
+      asset: "BTC",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 1_014.75,
+      asset: "USDT",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 0.5,
+      asset: "ETH",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 1_436,
+      asset: "USDT",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 10,
+      asset: "SOL",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 1_345.6,
+      asset: "USDT",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 304,
+      asset: "USDT",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 1_500,
+      asset: "DOGE",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 120,
+      asset: "TON",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 334.8,
+      asset: "USDT",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
+      amount: 76,
+      asset: "USDT",
+      userId: counterpartyUser.id,
+    }),
+    lockFinancialAccount({
+      amount: 70,
+      asset: "XCP",
+      userId: user.id,
+    }),
+    lockFinancialAccount({
       amount: 7_600,
       asset: "RUB",
       userId: counterpartyUser.id,
@@ -484,57 +726,12 @@ async function main() {
       userId: user.id,
     }),
     lockFinancialAccount({
-      amount: 500,
-      asset: "USD",
-      userId: counterpartyUser.id,
-    }),
-    lockFinancialAccount({
-      amount: 18_340,
-      asset: "RUB",
-      userId: user.id,
-    }),
-    lockFinancialAccount({
-      amount: 300,
-      asset: "EUR",
-      userId: counterpartyUser.id,
-    }),
-    lockFinancialAccount({
       amount: 40,
       asset: "XCP",
       userId: counterpartyUser.id,
     }),
     lockFinancialAccount({
       amount: 57.6,
-      asset: "USD",
-      userId: user.id,
-    }),
-    lockFinancialAccount({
-      amount: 250,
-      asset: "EUR",
-      userId: counterpartyUser.id,
-    }),
-    lockFinancialAccount({
-      amount: 160.65,
-      asset: "USD",
-      userId: user.id,
-    }),
-    lockFinancialAccount({
-      amount: 37_950,
-      asset: "RUB",
-      userId: user.id,
-    }),
-    lockFinancialAccount({
-      amount: 2_500,
-      asset: "CNY",
-      userId: counterpartyUser.id,
-    }),
-    lockFinancialAccount({
-      amount: 4_000,
-      asset: "CNY",
-      userId: counterpartyUser.id,
-    }),
-    lockFinancialAccount({
-      amount: 272,
       asset: "USD",
       userId: user.id,
     }),
@@ -602,7 +799,7 @@ async function main() {
     {
       currency: "USD",
       balance: 320,
-      averageRate: 91.4,
+      averageRate: null,
     },
   ] satisfies BrokerageCashBalanceSeed[];
 

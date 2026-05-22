@@ -4,24 +4,18 @@ export type PortfolioHolding = {
   averagePrice: number;
 };
 
-export type PortfolioCurrencyBalance = {
-  code: string;
-  quantity: number;
-  averageRate: number;
-};
-
 export type PortfolioTransferCurrency = "RUB" | "USD";
 
 export type PortfolioState = {
   cashBalance: number;
-  currencies: PortfolioCurrencyBalance[];
+  usdCashBalance: number;
   holdings: PortfolioHolding[];
 };
 
 export function emptyPortfolioState(): PortfolioState {
   return {
     cashBalance: 0,
-    currencies: [],
+    usdCashBalance: 0,
     holdings: [],
   };
 }

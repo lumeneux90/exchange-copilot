@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
 import {
   depositFundsAction,
@@ -13,7 +12,6 @@ import {
 import { notifyFinanceRefresh } from "@/src/features/finance/model/finance-context";
 import {
   emptyPortfolioState,
-  type PortfolioCurrencyBalance,
   type PortfolioHolding,
   type PortfolioState,
   type PortfolioTransferCurrency,
@@ -49,23 +47,14 @@ type PortfolioHoldingSnapshot = PortfolioHolding & {
 
 export type PortfolioSnapshot = {
   cashBalance: number;
-  currenciesMarketValue: number;
+  usdCashBalance: number;
+  usdMarketValue: number;
   investedAmount: number;
   marketValue: number;
   totalValue: number;
   totalProfitLoss: number;
   totalProfitLossPercent: number;
   positionsCount: number;
-  currencyPositionsCount: number;
-  currencies: Array<
-    PortfolioCurrencyBalance & {
-      currentRate: number;
-      marketValue: number;
-      costBasis: number;
-      profitLoss: number;
-      profitLossPercent: number;
-    }
-  >;
   holdings: PortfolioHoldingSnapshot[];
 };
 
@@ -76,12 +65,9 @@ const PortfolioContext = React.createContext<PortfolioContextValue | null>(
 export function buildPortfolioSnapshot(
   portfolio: PortfolioState,
   stocks: Stock[],
-  currencyRates: CurrencyRate[] = []
+  usdRubRate = 0
 ): PortfolioSnapshot {
   const pricesByTicker = new Map(stocks.map((stock) => [stock.ticker, stock]));
-  const ratesByCode = new Map(
-    currencyRates.map((rate) => [rate.label.split("/")[0] ?? rate.code, rate])
-  );
 
   const holdings = portfolio.holdings.map((holding) => {
     const stock = pricesByTicker.get(holding.ticker);
@@ -102,65 +88,30 @@ export function buildPortfolioSnapshot(
     };
   });
 
-  const currencies = portfolio.currencies.map((currency) => {
-    const rate = ratesByCode.get(currency.code);
-    const currentRate = rate?.price ?? currency.averageRate;
-    const marketValue = currentRate * currency.quantity;
-    const costBasis = currency.averageRate * currency.quantity;
-    const profitLoss = marketValue - costBasis;
-    const profitLossPercent =
-      costBasis > 0 ? (profitLoss / costBasis) * 100 : 0;
-
-    return {
-      ...currency,
-      currentRate,
-      marketValue,
-      costBasis,
-      profitLoss,
-      profitLossPercent,
-    };
-  });
-
   const investedAmount = holdings.reduce(
     (sum, holding) => sum + holding.costBasis,
-    0
-  );
-  const currenciesCostBasis = currencies.reduce(
-    (sum, currency) => sum + currency.costBasis,
     0
   );
   const marketValue = holdings.reduce(
     (sum, holding) => sum + holding.marketValue,
     0
   );
-  const currenciesMarketValue = currencies.reduce(
-    (sum, currency) => sum + currency.marketValue,
-    0
-  );
-  const totalValue =
-    portfolio.cashBalance + marketValue + currenciesMarketValue;
-  const totalProfitLoss =
-    marketValue +
-    currenciesMarketValue -
-    (investedAmount + currenciesCostBasis);
+  const usdMarketValue = portfolio.usdCashBalance * usdRubRate;
+  const totalValue = portfolio.cashBalance + marketValue + usdMarketValue;
+  const totalProfitLoss = marketValue - investedAmount;
   const totalProfitLossPercent =
-    investedAmount + currenciesCostBasis > 0
-      ? (totalProfitLoss / (investedAmount + currenciesCostBasis)) * 100
-      : 0;
+    investedAmount > 0 ? (totalProfitLoss / investedAmount) * 100 : 0;
 
   return {
     cashBalance: portfolio.cashBalance,
-    currenciesMarketValue,
+    usdCashBalance: portfolio.usdCashBalance,
+    usdMarketValue,
     investedAmount,
     marketValue,
     totalValue,
     totalProfitLoss,
     totalProfitLossPercent,
     positionsCount: holdings.length,
-    currencyPositionsCount: currencies.length,
-    currencies: currencies.sort(
-      (left, right) => right.marketValue - left.marketValue
-    ),
     holdings: holdings.sort(
       (left, right) => right.marketValue - left.marketValue
     ),

@@ -6,7 +6,6 @@ import {
   tradeStock,
   withdrawFunds,
 } from "@/src/features/portfolio/model/portfolio-server";
-import { getCurrencyRates } from "@/src/entities/market/api/get-currency-rates";
 import { getStocks } from "@/src/entities/stock/api/get-stocks";
 import { getErrorMessage } from "@/src/lib/errors";
 import { getCurrentUser } from "@/src/lib/session";
@@ -67,22 +66,6 @@ async function getExecutionStockPrice(ticker: string, quotedPrice: number) {
   return stock.price;
 }
 
-async function getCurrentCurrencyRate(code: string) {
-  const normalizedCode = code.trim().toUpperCase();
-  const currencyRates = await getCurrencyRates();
-  const currencyRate = currencyRates.find(
-    (rate) =>
-      rate.code === normalizedCode ||
-      (rate.label.split("/")[0] ?? rate.code) === normalizedCode
-  );
-
-  if (!currencyRate) {
-    throw new Error("Не удалось получить актуальный курс валюты.");
-  }
-
-  return currencyRate.price;
-}
-
 export async function getPortfolioStateAction() {
   const userId = await requireCurrentUserId();
 
@@ -99,13 +82,10 @@ export async function depositFundsAction(
 ) {
   try {
     const userId = await requireCurrentUserId();
-    const rate =
-      currency === "RUB" ? 1 : await getCurrentCurrencyRate(currency);
     const portfolio = await depositFunds({
       userId,
       amount,
       currency,
-      rate,
     });
 
     return {

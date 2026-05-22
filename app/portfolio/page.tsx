@@ -1,21 +1,17 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { PortfolioOverview } from "@/components/portfolio/portfolio-overview";
-import { getCurrencyRates } from "@/src/entities/market/api/get-currency-rates";
+import { getUsdRubReferenceRate } from "@/src/features/finance/model/finance-server";
 import { getStocks } from "@/src/entities/stock/api/get-stocks";
 
 export default async function PortfolioPage() {
-  const [stocks, currencyRates] = await Promise.all([
+  const [stocks, usdRubRate] = await Promise.all([
     getStocks(),
-    getCurrencyRates(),
+    getUsdRubReferenceRate(),
   ]);
 
   return (
-    <DashboardShell
-      title="Портфель"
-      currencyRates={currencyRates}
-      stocks={stocks}
-    >
-      <PortfolioOverview currencyRates={currencyRates} stocks={stocks} />
+    <DashboardShell title="Портфель" stocks={stocks} usdRubRate={usdRubRate}>
+      <PortfolioOverview stocks={stocks} usdRubRate={usdRubRate} />
     </DashboardShell>
   );
 }

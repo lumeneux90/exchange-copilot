@@ -26,7 +26,6 @@ import {
   RiWallet3Line,
   RiBankCardLine,
 } from "@remixicon/react";
-import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
 import { useCurrentUser } from "@/src/features/auth/model/current-user-context";
 import { useFinance } from "@/src/features/finance/model/finance-context";
@@ -67,12 +66,12 @@ const data = {
 };
 
 export function AppSidebar({
-  currencyRates,
   stocks,
+  usdRubRate = 0,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
-  currencyRates: CurrencyRate[];
   stocks: Stock[];
+  usdRubRate?: number;
 }) {
   const pathname = usePathname();
   const currentUser = useCurrentUser();
@@ -104,10 +103,7 @@ export function AppSidebar({
           <SidebarSpotAccounts accounts={finance.accounts} />
         ) : (
           <>
-            <SidebarPortfolioCard
-              currencyRates={currencyRates}
-              stocks={stocks}
-            />
+            <SidebarPortfolioCard stocks={stocks} usdRubRate={usdRubRate} />
             <SidebarWatchlistCard stocks={stocks} />
           </>
         )}

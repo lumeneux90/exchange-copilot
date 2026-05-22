@@ -6,7 +6,6 @@ import {
   type PrismaClient,
 } from "@prisma/client";
 
-import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type {
   PortfolioHistoryItem,
   PortfolioHistoryPage,
@@ -25,7 +24,7 @@ const POSITION_EPSILON = 0.000001;
 const DEFAULT_HISTORY_PAGE_SIZE = 25;
 const MAX_HISTORY_PAGE_SIZE = 100;
 const SERIALIZABLE_TRANSACTION_RETRIES = 3;
-const BROKERAGE_CURRENCIES: BrokerageCurrency[] = ["RUB", "USD", "EUR", "CNY"];
+const BROKERAGE_CURRENCIES: BrokerageCurrency[] = ["RUB", "USD"];
 const TRANSFER_CURRENCIES: PortfolioTransferCurrency[] = ["RUB", "USD"];
 const FINANCIAL_ACCOUNT_DEFAULTS = {
   RUB: 0,
@@ -35,7 +34,6 @@ const FINANCIAL_ACCOUNT_DEFAULTS = {
 
 export type PortfolioLeaderboardItem = {
   cashBalance: number;
-  currencyPositionsCount: number;
   holdingsCount: number;
   investedAmount: number;
   login: string;
@@ -160,21 +158,13 @@ function mapPortfolioState(portfolio: {
   const rubCashBalance = portfolio.cashBalances.find(
     (cashBalance) => cashBalance.currency === "RUB"
   );
-  const currencies = portfolio.cashBalances
-    .filter(
-      (cashBalance) =>
-        cashBalance.currency !== "RUB" && toNumber(cashBalance.balance) > 0
-    )
-    .map((cashBalance) => ({
-      code: cashBalance.currency,
-      quantity: toNumber(cashBalance.balance),
-      averageRate: toNumber(cashBalance.averageRate),
-    }))
-    .sort((left, right) => left.code.localeCompare(right.code));
+  const usdCashBalance = portfolio.cashBalances.find(
+    (cashBalance) => cashBalance.currency === "USD"
+  );
 
   return {
     cashBalance: toNumber(rubCashBalance?.balance ?? portfolio.cashBalance),
-    currencies,
+    usdCashBalance: toNumber(usdCashBalance?.balance),
     holdings,
   };
 }
@@ -255,18 +245,6 @@ function assertTransferCurrency(
   if (!TRANSFER_CURRENCIES.includes(currency as PortfolioTransferCurrency)) {
     throw new Error("Эта валюта недоступна для перевода между счетами.");
   }
-}
-
-function getTransferRate(currency: PortfolioTransferCurrency, rate?: number) {
-  if (currency === "RUB") {
-    return 1;
-  }
-
-  if (!Number.isFinite(rate) || rate == null || rate <= 0) {
-    throw new Error("Не удалось определить курс валюты для перевода.");
-  }
-
-  return rate;
 }
 
 async function getBrokerageCashBalance(
@@ -380,13 +358,10 @@ export async function getPortfolioHistoryPage(
 
 export async function getPortfolioLeaderboard(
   stocks: Stock[],
-  currencyRates: CurrencyRate[]
+  usdRubRate: number
 ): Promise<PortfolioLeaderboardItem[]> {
   const prisma = getPrisma();
   const pricesByTicker = new Map(stocks.map((stock) => [stock.ticker, stock]));
-  const ratesByCode = new Map(
-    currencyRates.map((rate) => [rate.label.split("/")[0] ?? rate.code, rate])
-  );
   const users = await prisma.user.findMany({
     include: {
       portfolio: {
@@ -411,31 +386,14 @@ export async function getPortfolioLeaderboard(
     const cashBalance = toNumber(
       rubCashBalance?.balance ?? portfolio?.cashBalance
     );
+    const usdCashBalance = toNumber(
+      cashBalances.find((cashBalance) => cashBalance.currency === "USD")
+        ?.balance
+    );
+    const usdValue = usdCashBalance * usdRubRate;
     let holdingsValue = 0;
     let holdingsCostBasis = 0;
-    let currenciesValue = 0;
-    let currenciesCostBasis = 0;
     let holdingsCount = 0;
-    let currencyPositionsCount = 0;
-
-    for (const cash of cashBalances) {
-      if (cash.currency === "RUB") {
-        continue;
-      }
-
-      const quantity = toNumber(cash.balance);
-      const currentRate =
-        ratesByCode.get(cash.currency)?.price ?? toNumber(cash.averageRate);
-      const averageRate = toNumber(cash.averageRate);
-
-      if (quantity <= 0) {
-        continue;
-      }
-
-      currencyPositionsCount += 1;
-      currenciesValue += currentRate * quantity;
-      currenciesCostBasis += averageRate * quantity;
-    }
 
     for (const position of positions) {
       const quantity = toNumber(position.quantity);
@@ -452,20 +410,19 @@ export async function getPortfolioLeaderboard(
       }
     }
 
-    const investedAmount = holdingsCostBasis + currenciesCostBasis;
-    const totalProfitLoss = holdingsValue + currenciesValue - investedAmount;
+    const investedAmount = holdingsCostBasis;
+    const totalProfitLoss = holdingsValue - investedAmount;
     const totalProfitLossPercent =
       investedAmount > 0 ? (totalProfitLoss / investedAmount) * 100 : 0;
 
     return {
       cashBalance,
-      currencyPositionsCount,
       holdingsCount,
       login: user.login,
       rank: 0,
       totalProfitLoss,
       totalProfitLossPercent,
-      totalValue: cashBalance + holdingsValue + currenciesValue,
+      totalValue: cashBalance + holdingsValue + usdValue,
       investedAmount,
       userId: user.id,
     };
@@ -496,7 +453,6 @@ export async function depositFunds(params: {
   userId: string;
   amount: number;
   currency?: PortfolioTransferCurrency;
-  rate?: number;
 }) {
   const prisma = getPrisma();
   const { amount, userId } = params;
@@ -505,8 +461,6 @@ export async function depositFunds(params: {
   assertAmount(amount, "Некорректная сумма пополнения.");
   assertTransferCurrency(currency);
   assertBrokerageCurrency(currency);
-
-  const transferRate = getTransferRate(currency, params.rate);
 
   const portfolio = await runSerializableTransaction(prisma, async (tx) => {
     const currentPortfolio = await upsertPortfolioRecord(tx, userId);
@@ -525,17 +479,6 @@ export async function depositFunds(params: {
       throw new Error(`Недостаточно ${currency} на финансовом счете.`);
     }
 
-    const currentBalance = toNumber(brokerageBalance.balance);
-    const currentAverageRate = toNumber(brokerageBalance.averageRate);
-    const currentCostBasis =
-      currentAverageRate > 0
-        ? currentAverageRate * currentBalance
-        : transferRate * currentBalance;
-    const nextBalance = currentBalance + amount;
-    const nextAverageRate =
-      currency === "RUB"
-        ? 1
-        : (currentCostBasis + transferRate * amount) / nextBalance;
     const operations: Array<Promise<unknown>> = [
       tx.financialAccount.update({
         where: { id: financialAccount.id },
@@ -548,7 +491,6 @@ export async function depositFunds(params: {
       tx.brokerageCashBalance.update({
         where: { id: brokerageBalance.id },
         data: {
-          averageRate: toDecimal(nextAverageRate),
           balance: {
             increment: toDecimal(amount),
           },
@@ -559,7 +501,6 @@ export async function depositFunds(params: {
           portfolioId: currentPortfolio.id,
           type: "DEPOSIT",
           currencyCode: currency,
-          price: currency === "RUB" ? null : toDecimal(transferRate),
           amount: toDecimal(amount),
         },
       }),
@@ -622,17 +563,10 @@ export async function withdrawFunds(params: {
       throw new Error(`Недостаточно ${currency} на брокерском счете.`);
     }
 
-    const nextBalance = toNumber(brokerageBalance.balance) - amount;
     const operations: Array<Promise<unknown>> = [
       tx.brokerageCashBalance.update({
         where: { id: brokerageBalance.id },
         data: {
-          averageRate:
-            currency === "RUB"
-              ? toDecimal(1)
-              : nextBalance <= POSITION_EPSILON
-                ? null
-                : brokerageBalance.averageRate,
           balance: {
             decrement: toDecimal(amount),
           },

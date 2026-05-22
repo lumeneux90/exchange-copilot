@@ -21,7 +21,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
 import {
   buildPortfolioSnapshot,
@@ -48,15 +47,15 @@ function getTrendTone(value: number) {
 }
 
 export function PortfolioOverview({
-  currencyRates,
   stocks,
+  usdRubRate = 0,
 }: {
-  currencyRates: CurrencyRate[];
   stocks: Stock[];
+  usdRubRate?: number;
 }) {
   const router = useRouter();
   const { portfolio } = usePortfolio();
-  const snapshot = buildPortfolioSnapshot(portfolio, stocks, currencyRates);
+  const snapshot = buildPortfolioSnapshot(portfolio, stocks, usdRubRate);
   const stocksByTicker = React.useMemo(
     () => new Map(stocks.map((stock) => [stock.ticker, stock])),
     [stocks]
@@ -67,7 +66,7 @@ export function PortfolioOverview({
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardDescription>Общая стоимость</CardDescription>
+            <CardDescription>Брокерский счёт</CardDescription>
             <CardTitle className="text-2xl font-semibold">
               {rubFormatter.format(snapshot.totalValue)}
             </CardTitle>

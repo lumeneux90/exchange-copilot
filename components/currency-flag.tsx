@@ -5,6 +5,10 @@ import Image from "next/image";
 import { cn } from "@/src/lib/utils";
 
 const currencyFlagMap: Record<string, { alt: string; src: string }> = {
+  RUB: {
+    alt: "Флаг России",
+    src: "/flags/ru-round.svg",
+  },
   USD: {
     alt: "Флаг США",
     src: "/flags/us-round.svg",
