@@ -3,18 +3,6 @@ CREATE TYPE "UserKind" AS ENUM ('HUMAN', 'TREASURY', 'AI_AGENT');
 ALTER TABLE "users"
 ADD COLUMN "kind" "UserKind" NOT NULL DEFAULT 'HUMAN';
 
-DELETE FROM "financial_trades"
-WHERE "asset" IN ('EUR', 'CNY') OR "quote_asset" IN ('EUR', 'CNY');
-
-DELETE FROM "financial_orders"
-WHERE "asset" IN ('EUR', 'CNY') OR "quote_asset" IN ('EUR', 'CNY');
-
-DELETE FROM "financial_market_pairs"
-WHERE "base_asset" IN ('EUR', 'CNY') OR "quote_asset" IN ('EUR', 'CNY');
-
-DELETE FROM "financial_accounts"
-WHERE "asset" IN ('EUR', 'CNY');
-
 ALTER TYPE "FinancialAsset" RENAME TO "FinancialAsset_old";
 
 CREATE TYPE "FinancialAsset" AS ENUM (
@@ -26,7 +14,6 @@ CREATE TYPE "FinancialAsset" AS ENUM (
   'ETH',
   'BNB',
   'SOL',
-  'XRP',
   'DOGE',
   'TON'
 );
