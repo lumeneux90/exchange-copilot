@@ -12,12 +12,17 @@ function getAccountTitle(asset: FinanceAsset) {
       return "Рублевая карта";
     case "USD":
       return "Валютная карта";
-    case "EUR":
-      return "Евро-карта";
-    case "CNY":
-      return "Юаневая карта";
+    case "USDT":
+      return "Спот-карта";
     case "XCP":
       return "Токен-карта";
+    case "BTC":
+    case "ETH":
+    case "BNB":
+    case "SOL":
+    case "DOGE":
+    case "TON":
+      return "Крипто-счёт";
   }
 }
 
@@ -27,12 +32,17 @@ function getAccountCardTheme(asset: FinanceAsset) {
       return "border-sidebar-primary/35 bg-[linear-gradient(135deg,#07131f_0%,color-mix(in_oklab,var(--primary)_58%,#123246)_55%,color-mix(in_oklab,var(--chart-3)_24%,#4f5965)_132%)] text-white";
     case "USD":
       return "border-orange-200/30 bg-[linear-gradient(135deg,#4a2f2a_0%,#9a5f42_52%,#d2b58c_132%)] text-white";
-    case "EUR":
-      return "border-sky-200/30 bg-[linear-gradient(135deg,#102033_0%,#2563eb_55%,#38bdf8_132%)] text-white";
-    case "CNY":
-      return "border-red-200/30 bg-[linear-gradient(135deg,#3b1010_0%,#dc2626_55%,#facc15_132%)] text-white";
+    case "USDT":
+      return "border-emerald-200/35 bg-[linear-gradient(135deg,#052e2b_0%,#047857_55%,#99f6e4_132%)] text-white";
     case "XCP":
       return "border-violet-200/35 bg-[linear-gradient(135deg,#18181b_0%,#7c3aed_55%,#22c55e_135%)] text-white";
+    case "BTC":
+    case "ETH":
+    case "BNB":
+    case "SOL":
+    case "DOGE":
+    case "TON":
+      return "border-cyan-200/30 bg-[linear-gradient(135deg,#082f49_0%,#0e7490_55%,#67e8f9_132%)] text-white";
   }
 }
 

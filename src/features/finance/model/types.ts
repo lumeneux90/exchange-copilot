@@ -1,4 +1,14 @@
-export type FinanceAsset = "RUB" | "USD" | "EUR" | "CNY" | "XCP";
+export type FinanceAsset =
+  | "RUB"
+  | "USD"
+  | "USDT"
+  | "XCP"
+  | "BTC"
+  | "ETH"
+  | "BNB"
+  | "SOL"
+  | "DOGE"
+  | "TON";
 
 export type FinancialMarketPairItem = {
   amountPrecision: number;
@@ -79,7 +89,7 @@ export function emptyFinanceState(): FinanceState {
     currentUserLogin: "",
     marketPairs: [],
     orders: [],
-    selectedPairSymbol: "XCP/RUB",
+    selectedPairSymbol: "XCP/USDT",
     trades: [],
   };
 }

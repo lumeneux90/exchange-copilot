@@ -1,14 +1,13 @@
 import { DataTable } from "@/components/data-table";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { SectionCards } from "@/components/section-cards";
-import { getCurrencyRates } from "@/src/entities/market/api/get-currency-rates";
+import { getUsdRubReferenceRate } from "@/src/features/finance/model/finance-server";
 import { getMoexIndex } from "@/src/entities/index/api/get-moex-index";
 import { getStocks } from "@/src/entities/stock/api/get-stocks";
 import { getPortfolioLeaderboard } from "@/src/features/portfolio/model/portfolio-server";
 
 function getMarketSummary(
   stocks: Awaited<ReturnType<typeof getStocks>>,
-  currencyRates: Awaited<ReturnType<typeof getCurrencyRates>>,
   moexIndex: Awaited<ReturnType<typeof getMoexIndex>>
 ) {
   const mostActiveStocks = [...stocks]
@@ -24,7 +23,6 @@ function getMarketSummary(
     .slice(0, 5);
 
   return {
-    currencyRates,
     moexIndexChangePercent: moexIndex?.changePercent ?? 0,
     moexIndexLabel: moexIndex?.shortName ?? "Индекс Мосбиржи",
     moexIndexValue: moexIndex?.currentValue ?? 0,
@@ -35,18 +33,18 @@ function getMarketSummary(
 }
 
 export default async function HomePage() {
-  const [stocks, currencyRates, moexIndex] = await Promise.all([
+  const [stocks, moexIndex, usdRubRate] = await Promise.all([
     getStocks(),
-    getCurrencyRates(),
     getMoexIndex(),
+    getUsdRubReferenceRate(),
   ]);
-  const leaderboard = await getPortfolioLeaderboard(stocks, currencyRates);
-  const summary = getMarketSummary(stocks, currencyRates, moexIndex);
+  const leaderboard = await getPortfolioLeaderboard(stocks, usdRubRate);
+  const summary = getMarketSummary(stocks, moexIndex);
 
   return (
     <DashboardShell
       title="Обзор рынка"
-      currencyRates={currencyRates}
+      usdRubRate={usdRubRate}
       stocks={stocks}
     >
       <section id="market-overview">

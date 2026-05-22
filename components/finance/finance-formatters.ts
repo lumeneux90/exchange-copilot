@@ -3,7 +3,7 @@ import type {
   FinancialOrderItem,
 } from "@/src/features/finance/model/types";
 
-const currencyFormatters: Record<FinanceAsset, Intl.NumberFormat> = {
+const currencyFormatters = {
   RUB: new Intl.NumberFormat("ru-RU", {
     currency: "RUB",
     maximumFractionDigits: 2,
@@ -16,14 +16,8 @@ const currencyFormatters: Record<FinanceAsset, Intl.NumberFormat> = {
     minimumFractionDigits: 2,
     style: "currency",
   }),
-  EUR: new Intl.NumberFormat("ru-RU", {
-    currency: "EUR",
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: "currency",
-  }),
-  CNY: new Intl.NumberFormat("ru-RU", {
-    currency: "CNY",
+  USDT: new Intl.NumberFormat("ru-RU", {
+    currency: "USD",
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
     style: "currency",
@@ -32,14 +26,64 @@ const currencyFormatters: Record<FinanceAsset, Intl.NumberFormat> = {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
   }),
-};
+  BTC: new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 8,
+    minimumFractionDigits: 0,
+  }),
+  ETH: new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 6,
+    minimumFractionDigits: 0,
+  }),
+  BNB: new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 4,
+    minimumFractionDigits: 0,
+  }),
+  SOL: new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 4,
+    minimumFractionDigits: 0,
+  }),
+  DOGE: new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }),
+  TON: new Intl.NumberFormat("ru-RU", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }),
+} satisfies Record<FinanceAsset, Intl.NumberFormat>;
 
-export function formatAssetAmount(amount: number, asset: FinanceAsset) {
-  if (asset === "XCP") {
-    return `${currencyFormatters.XCP.format(amount)} XCP`;
+const tokenAssets = new Set<string>([
+  "USDT",
+  "XCP",
+  "BTC",
+  "ETH",
+  "BNB",
+  "SOL",
+  "DOGE",
+  "TON",
+]);
+
+const fallbackFormatter = new Intl.NumberFormat("ru-RU", {
+  maximumFractionDigits: 8,
+  minimumFractionDigits: 0,
+});
+
+export function formatAssetAmount(
+  amount: number,
+  asset: FinanceAsset | string
+) {
+  const formatter =
+    currencyFormatters[asset as FinanceAsset] ?? fallbackFormatter;
+
+  if (tokenAssets.has(asset)) {
+    return `${formatter.format(amount)} ${asset}`;
   }
 
-  return currencyFormatters[asset].format(amount);
+  if (!currencyFormatters[asset as FinanceAsset]) {
+    return `${formatter.format(amount)} ${asset}`;
+  }
+
+  return formatter.format(amount);
 }
 
 export function formatOrderDate(value: string) {

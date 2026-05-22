@@ -1,19 +1,18 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { Stock } from "@/src/entities/stock/model/types";
 
 export function DashboardShell({
-  currencyRates = [],
   children,
   stocks = [],
   title,
+  usdRubRate = 0,
 }: {
-  currencyRates?: CurrencyRate[];
   children: React.ReactNode;
   stocks?: Stock[];
   title: string;
+  usdRubRate?: number;
 }) {
   return (
     <SidebarProvider
@@ -24,11 +23,7 @@ export function DashboardShell({
         } as React.CSSProperties
       }
     >
-      <AppSidebar
-        variant="inset"
-        currencyRates={currencyRates}
-        stocks={stocks}
-      />
+      <AppSidebar variant="inset" stocks={stocks} usdRubRate={usdRubRate} />
       <SidebarInset className="min-w-0">
         <SiteHeader title={title} />
         <div className="flex flex-1 flex-col">

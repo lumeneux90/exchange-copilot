@@ -10,6 +10,7 @@ model User {
   id                      String             @id @default(cuid())
   login                   String             @unique
   passwordHash            String             @map("password_hash")
+  kind                    UserKind           @default(HUMAN)
   createdAt               DateTime           @default(now()) @map("created_at")
   sessions                Session[]
   portfolio               Portfolio?
@@ -18,6 +19,12 @@ model User {
   acceptedFinancialOrders FinancialOrder[]   @relation("FinancialOrdersAccepted")
 
   @@map("users")
+}
+
+enum UserKind {
+  HUMAN
+  TREASURY
+  AI_AGENT
 }
 
 model Session {
@@ -47,8 +54,6 @@ enum PortfolioTransactionType {
 enum BrokerageCurrency {
   RUB
   USD
-  EUR
-  CNY
 }
 
 model Portfolio {
@@ -122,9 +127,14 @@ model PortfolioTransaction {
 enum FinancialAsset {
   RUB
   USD
-  EUR
-  CNY
+  USDT
   XCP
+  BTC
+  ETH
+  BNB
+  SOL
+  DOGE
+  TON
 }
 
 enum FinancialOrderStatus {
@@ -154,17 +164,17 @@ model FinancialAccount {
 }
 
 model FinancialMarketPair {
-  id              String          @id @default(cuid())
-  symbol          String          @unique
-  baseAsset       FinancialAsset  @map("base_asset")
-  quoteAsset      FinancialAsset  @map("quote_asset")
+  id              String           @id @default(cuid())
+  symbol          String           @unique
+  baseAsset       FinancialAsset   @map("base_asset")
+  quoteAsset      FinancialAsset   @map("quote_asset")
   label           String
-  enabled         Boolean         @default(true)
-  pricePrecision  Int             @default(2) @map("price_precision")
-  amountPrecision Int             @default(2) @map("amount_precision")
-  sortOrder       Int             @default(0) @map("sort_order")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  enabled         Boolean          @default(true)
+  pricePrecision  Int              @default(2) @map("price_precision")
+  amountPrecision Int              @default(2) @map("amount_precision")
+  sortOrder       Int              @default(0) @map("sort_order")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
   orders          FinancialOrder[]
   trades          FinancialTrade[]
 
@@ -200,19 +210,19 @@ model FinancialOrder {
 }
 
 model FinancialTrade {
-  id          String         @id @default(cuid())
-  pairId      String?        @map("pair_id")
-  buyOrderId  String         @map("buy_order_id")
-  sellOrderId String         @map("sell_order_id")
-  buyerUserId String         @map("buyer_user_id")
-  sellerUserId String        @map("seller_user_id")
-  asset       FinancialAsset
-  quoteAsset  FinancialAsset @map("quote_asset")
-  amount      Decimal        @db.Decimal(20, 8)
-  price       Decimal        @db.Decimal(20, 8)
-  quoteAmount Decimal        @map("quote_amount") @db.Decimal(20, 8)
-  executedAt  DateTime       @default(now()) @map("executed_at")
-  pair        FinancialMarketPair? @relation(fields: [pairId], references: [id], onDelete: SetNull)
+  id           String               @id @default(cuid())
+  pairId       String?              @map("pair_id")
+  buyOrderId   String               @map("buy_order_id")
+  sellOrderId  String               @map("sell_order_id")
+  buyerUserId  String               @map("buyer_user_id")
+  sellerUserId String               @map("seller_user_id")
+  asset        FinancialAsset
+  quoteAsset   FinancialAsset       @map("quote_asset")
+  amount       Decimal              @db.Decimal(20, 8)
+  price        Decimal              @db.Decimal(20, 8)
+  quoteAmount  Decimal              @map("quote_amount") @db.Decimal(20, 8)
+  executedAt   DateTime             @default(now()) @map("executed_at")
+  pair         FinancialMarketPair? @relation(fields: [pairId], references: [id], onDelete: SetNull)
 
   @@index([pairId, executedAt(sort: Desc)])
   @@index([asset, quoteAsset, executedAt(sort: Desc)])

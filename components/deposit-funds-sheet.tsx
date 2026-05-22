@@ -70,16 +70,6 @@ function formatTransferAmount(
   return transferCurrencyFormatters[currency].format(amount);
 }
 
-function getTransferCurrencyBalance(
-  portfolioCurrencies: Array<{ code: string; quantity: number }>,
-  currency: PortfolioTransferCurrency
-) {
-  return (
-    portfolioCurrencies.find((balance) => balance.code === currency)
-      ?.quantity ?? 0
-  );
-}
-
 export function DepositFundsSheet({
   operation = "deposit",
   triggerLabel = "Пополнить счет",
@@ -112,7 +102,7 @@ export function DepositFundsSheet({
         ?.balance ?? 0)
     : currency === "RUB"
       ? portfolio.cashBalance
-      : getTransferCurrencyBalance(portfolio.currencies, currency);
+      : portfolio.usdCashBalance;
   const clampedSliderAmount = Math.min(
     Math.max(parsedAmount, 0),
     availableAmount

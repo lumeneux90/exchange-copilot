@@ -10,7 +10,6 @@ import {
 } from "@remixicon/react";
 
 import { CompanyLogo } from "@/components/company-logo";
-import { FxTradePanel } from "@/components/portfolio/fx-trade-panel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,14 +26,12 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import type { CurrencyRate } from "@/src/entities/market/api/get-currency-rates";
 import type { PortfolioLeaderboardItem } from "@/src/features/portfolio/model/portfolio-server";
 import type { Stock } from "@/src/entities/stock/model/types";
 import { getUserInitials } from "@/src/lib/user";
 import { cn } from "@/src/lib/utils";
 
 type MarketSummary = {
-  currencyRates: CurrencyRate[];
   moexIndexChangePercent: number;
   moexIndexLabel: string;
   moexIndexValue: number;
@@ -305,8 +302,7 @@ function UserLeaderboardCarousel({
                         {item.login}
                       </div>
                       <div className="text-muted-foreground text-xs">
-                        {item.holdingsCount + item.currencyPositionsCount}{" "}
-                        позиций
+                        {item.holdingsCount} позиций
                       </div>
                     </div>
                   </div>
@@ -403,18 +399,6 @@ export function SectionCards({
             direction={moexIndexDirection}
             value={summary.moexIndexChangePercent}
           />
-        </CardContent>
-      </Card>
-
-      <Card className="@container/card @xl/main:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold @[250px]/card:text-xl">
-            Курсы валют
-          </CardTitle>
-          <CardDescription>Официальные ориентиры ЦБ</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FxTradePanel currencyRates={summary.currencyRates} />
         </CardContent>
       </Card>
 
