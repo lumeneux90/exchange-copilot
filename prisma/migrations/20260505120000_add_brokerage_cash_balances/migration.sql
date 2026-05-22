@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "BrokerageCurrency" AS ENUM ('RUB', 'USD', 'EUR', 'CNY');
+CREATE TYPE "BrokerageCurrency" AS ENUM ('RUB', 'USD');
 
 -- AlterEnum
 ALTER TYPE "PortfolioTransactionType" ADD VALUE 'WITHDRAWAL';
@@ -59,7 +59,7 @@ SELECT
 FROM "portfolio_positions"
 WHERE
     "type" = 'CURRENCY'
-    AND "currency_code" IN ('USD', 'EUR', 'CNY')
+    AND "currency_code" = 'USD'
     AND "quantity" <> 0
 ON CONFLICT DO NOTHING;
 

@@ -1,7 +1,3 @@
--- AlterEnum
-ALTER TYPE "FinancialAsset" ADD VALUE 'EUR';
-ALTER TYPE "FinancialAsset" ADD VALUE 'CNY';
-
 -- CreateTable
 CREATE TABLE "financial_market_pairs" (
     "id" TEXT NOT NULL,
