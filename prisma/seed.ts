@@ -4,6 +4,11 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+import {
+  AI_MARKET_AGENT_USER_SEEDS,
+  getSeedBalanceMultiplier,
+} from "../src/features/finance/model/ai-market-agent-rules";
+
 const connectionString = process.env.XC_COPILOT_DATABASE_URL;
 
 if (!connectionString) {
@@ -92,6 +97,13 @@ const financialAccountSeeds = [
     balance: 500,
   },
 ] satisfies FinancialAccountSeed[];
+
+function multiplyFinancialAccountSeeds(multiplier: number) {
+  return financialAccountSeeds.map((account) => ({
+    ...account,
+    balance: account.balance * multiplier,
+  })) satisfies FinancialAccountSeed[];
+}
 
 const counterpartyFinancialAccountSeeds = [
   {
@@ -339,6 +351,7 @@ async function lockFinancialAccount(params: {
 async function main() {
   const passwordHash = await bcrypt.hash(password, 12);
   const counterpartyPasswordHash = await bcrypt.hash(counterpartyPassword, 12);
+  const agentPasswordHash = await bcrypt.hash("synthetic-market-user", 12);
 
   const user = await prisma.user.upsert({
     where: { login },
@@ -364,24 +377,41 @@ async function main() {
       passwordHash: counterpartyPasswordHash,
     },
   });
+  const aiMarketUsers = await Promise.all(
+    AI_MARKET_AGENT_USER_SEEDS.map((agent) =>
+      prisma.user.upsert({
+        where: { login: agent.login },
+        update: {
+          kind: agent.kind,
+          passwordHash: agentPasswordHash,
+        },
+        create: {
+          kind: agent.kind,
+          login: agent.login,
+          passwordHash: agentPasswordHash,
+        },
+      })
+    )
+  );
+  const seedUserIds = [
+    user.id,
+    counterpartyUser.id,
+    ...aiMarketUsers.map((marketUser) => marketUser.id),
+  ];
 
   await prisma.financialOrder.deleteMany({
     where: {
       OR: [
-        { creatorUserId: user.id },
-        { acceptedByUserId: user.id },
-        { creatorUserId: counterpartyUser.id },
-        { acceptedByUserId: counterpartyUser.id },
+        { creatorUserId: { in: seedUserIds } },
+        { acceptedByUserId: { in: seedUserIds } },
       ],
     },
   });
   await prisma.financialTrade.deleteMany({
     where: {
       OR: [
-        { buyerUserId: user.id },
-        { sellerUserId: user.id },
-        { buyerUserId: counterpartyUser.id },
-        { sellerUserId: counterpartyUser.id },
+        { buyerUserId: { in: seedUserIds } },
+        { sellerUserId: { in: seedUserIds } },
       ],
     },
   });
@@ -419,6 +449,16 @@ async function main() {
       counterpartyUser.id,
       counterpartyFinancialAccountSeeds
     ),
+    ...aiMarketUsers.map((marketUser, index) => {
+      const agentSeed = AI_MARKET_AGENT_USER_SEEDS[index];
+
+      return upsertFinancialAccounts(
+        marketUser.id,
+        multiplyFinancialAccountSeeds(
+          getSeedBalanceMultiplier(agentSeed.kind, agentSeed.login)
+        )
+      );
+    }),
   ]);
 
   await prisma.financialOrder.createMany({
@@ -428,7 +468,7 @@ async function main() {
         asset: "USD",
         creatorUserId: counterpartyUser.id,
         pairId: usdRubPair.id,
-        price: decimal(91.6),
+        price: decimal(71.9),
         quoteAsset: "RUB",
         side: "SELL",
       },
@@ -437,7 +477,7 @@ async function main() {
         asset: "USD",
         creatorUserId: user.id,
         pairId: usdRubPair.id,
-        price: decimal(91.2),
+        price: decimal(71.4),
         quoteAsset: "RUB",
         side: "BUY",
       },
@@ -887,6 +927,10 @@ async function main() {
   console.log("Seed counterparty user is ready:");
   console.log(`login: ${counterpartyLogin}`);
   console.log(`password: ${counterpartyPassword}`);
+  console.log("Seed AI market users are ready:");
+  console.log(
+    AI_MARKET_AGENT_USER_SEEDS.map((agent) => agent.login).join(", ")
+  );
   console.log("Seed financial accounts are ready.");
   console.log("Seed financial orders are ready.");
   console.log("Seed portfolio is ready.");

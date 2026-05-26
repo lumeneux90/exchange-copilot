@@ -12,6 +12,7 @@ import type {
   FinancialOrderSide,
   FinancialTradeItem,
 } from "@/src/features/finance/model/types";
+import { assertPriceWithinReferenceBand } from "@/src/features/finance/model/reference-prices";
 
 const DECIMAL_SCALE = 8;
 const ORDER_HISTORY_LIMIT = 30;
@@ -19,7 +20,7 @@ const SERIALIZABLE_TRANSACTION_RETRIES = 3;
 
 const DEFAULT_MARKET_PAIR_SYMBOL = "XCP/USDT";
 const USD_RUB_PAIR_SYMBOL = "USD/RUB";
-const DEFAULT_USD_RUB_RATE = 91.4;
+const DEFAULT_USD_RUB_RATE = 71.668;
 
 const FINANCE_ASSETS: FinanceAsset[] = [
   "RUB",
@@ -671,6 +672,8 @@ export async function createFinancialOrder(params: {
     if (!creator) {
       throw new Error("Пользователь не найден.");
     }
+
+    await assertPriceWithinReferenceBand(pair.symbol, price);
 
     await ensureFinancialAccounts(tx, params.creatorUserId);
     const lockAsset = params.side === "BUY" ? pair.quoteAsset : pair.baseAsset;
