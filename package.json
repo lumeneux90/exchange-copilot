@@ -12,6 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:validate": "prisma validate",
+    "market:mode": "tsx scripts/check-market-mode.ts",
     "check": "pnpm check:copies && pnpm lint && pnpm exec tsc --noEmit",
     "check:copies": "node scripts/check-copy-artifacts.mjs",
     "lint": "eslint .",
