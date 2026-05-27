@@ -1,5 +1,3 @@
-import "server-only";
-
 import { Prisma } from "@prisma/client";
 
 import {
@@ -9,6 +7,7 @@ import {
   normalizeMarketMode,
   type MarketMode,
 } from "@/src/features/finance/model/ai-market-agent-rules";
+import { tryGetLlmMarketMode } from "@/src/features/finance/model/llm-market-orchestrator";
 import { getReferencePriceQuote } from "@/src/features/finance/model/reference-prices";
 import { getPrisma } from "@/src/lib/db";
 
@@ -234,9 +233,14 @@ export async function getCurrentMarketMode(
   previousMode = FALLBACK_MARKET_MODE
 ) {
   const snapshot = await buildMarketSnapshot(previousMode);
+  const llmResult = await tryGetLlmMarketMode(snapshot);
+  const llmStatus = llmResult.ok ? "USED" : "FAILED";
 
   return {
-    mode: getRuleBasedMarketMode(snapshot),
+    llmError: llmResult.ok ? null : llmResult.error,
+    llmStatus,
+    mode: llmResult.ok ? llmResult.mode : getRuleBasedMarketMode(snapshot),
+    modeSource: llmResult.ok ? "LLM" : "RULE_BASED",
     snapshot,
   };
 }
