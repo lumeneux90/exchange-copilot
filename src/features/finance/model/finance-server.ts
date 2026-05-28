@@ -19,7 +19,6 @@ const DECIMAL_SCALE = 8;
 const ORDER_HISTORY_LIMIT = 30;
 const SERIALIZABLE_TRANSACTION_RETRIES = 3;
 
-const DEFAULT_MARKET_PAIR_SYMBOL = "XCP/USDT";
 const USD_RUB_PAIR_SYMBOL = "USD/RUB";
 const DEFAULT_USD_RUB_RATE = 71.668;
 
@@ -158,6 +157,8 @@ const MARKET_PAIR_SEEDS = [
   sortOrder: number;
   symbol: string;
 }>;
+
+const DEFAULT_MARKET_PAIR_SYMBOL = MARKET_PAIR_SEEDS[0].symbol;
 
 function toNumber(value: Prisma.Decimal | number | null | undefined) {
   if (value == null) {
