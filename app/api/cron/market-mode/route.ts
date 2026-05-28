@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getCurrentMarketMode } from "@/src/features/finance/model/market-orchestrator";
+import { runAiMarketTick } from "@/src/features/finance/model/ai-market-runner";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,15 +26,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const result = await getCurrentMarketMode();
+  const result = await runAiMarketTick();
 
   return NextResponse.json({
     ok: true,
+    cancelledOrdersCount: result.cancelledOrdersCount,
+    errors: result.errors,
     llmError: result.llmError,
     llmStatus: result.llmStatus,
     mode: result.mode,
     modeSource: result.modeSource,
-    pairsCount: result.snapshot.pairs.length,
-    xcp: result.snapshot.xcp,
+    placedOrdersCount: result.placedOrdersCount,
   });
 }
