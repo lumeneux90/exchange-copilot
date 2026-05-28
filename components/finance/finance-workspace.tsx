@@ -22,8 +22,9 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getFinanceStateAction } from "@/src/features/finance/model/actions";
+import { getFinancePairStateAction } from "@/src/features/finance/model/actions";
 import type {
+  FinancePairState,
   FinanceState,
   FinancialMarketPairItem,
   FinancialOrderItem,
@@ -34,13 +35,11 @@ import { cn } from "@/src/lib/utils";
 const HISTORY_PAGE_SIZE = 8;
 
 function PairCarousel({
-  isPending,
   mid,
   onPairChange,
   pairs,
   selectedPair,
 }: {
-  isPending: boolean;
   mid: number | null;
   onPairChange: (symbol: string) => void;
   pairs: FinancialMarketPairItem[];
@@ -65,7 +64,6 @@ function PairCarousel({
                     ? "border-primary bg-primary/10 text-foreground"
                     : "bg-background hover:bg-muted/60"
                 )}
-                disabled={isPending}
                 onClick={() => onPairChange(pair.symbol)}
               >
                 <AssetIcon
@@ -138,12 +136,35 @@ function PairStats({
 
 export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
   const [localFinance, setLocalFinance] = React.useState(finance);
-  const [isPairPending, startPairTransition] = React.useTransition();
   const [selectedPrice, setSelectedPrice] = React.useState<number | null>(null);
+  const pairRequestIdRef = React.useRef(0);
+  const pairStateCacheRef = React.useRef(new Map<string, FinancePairState>());
 
   React.useEffect(() => {
     setLocalFinance(finance);
+    pairStateCacheRef.current = new Map([
+      [
+        finance.selectedPairSymbol,
+        {
+          orders: finance.orders,
+          selectedPairSymbol: finance.selectedPairSymbol,
+          trades: finance.trades,
+        },
+      ],
+    ]);
   }, [finance]);
+
+  React.useEffect(() => {
+    pairStateCacheRef.current.set(localFinance.selectedPairSymbol, {
+      orders: localFinance.orders,
+      selectedPairSymbol: localFinance.selectedPairSymbol,
+      trades: localFinance.trades,
+    });
+  }, [
+    localFinance.orders,
+    localFinance.selectedPairSymbol,
+    localFinance.trades,
+  ]);
 
   const selectedPair =
     localFinance.marketPairs.find(
@@ -167,14 +188,45 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
     }
 
     setSelectedPrice(null);
+    const previousPairSymbol = localFinance.selectedPairSymbol;
+    const previousPairState = pairStateCacheRef.current.get(previousPairSymbol);
+    const cachedPairState = pairStateCacheRef.current.get(symbol);
+    const requestId = pairRequestIdRef.current + 1;
 
-    startPairTransition(async () => {
+    pairRequestIdRef.current = requestId;
+    setLocalFinance((currentFinance) => ({
+      ...currentFinance,
+      orders: cachedPairState?.orders ?? [],
+      selectedPairSymbol: symbol,
+      trades: cachedPairState?.trades ?? [],
+    }));
+
+    void (async () => {
       try {
-        setLocalFinance(await getFinanceStateAction(symbol));
+        const pairState = await getFinancePairStateAction(symbol);
+
+        if (pairRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        pairStateCacheRef.current.set(pairState.selectedPairSymbol, pairState);
+        setLocalFinance((currentFinance) => ({
+          ...currentFinance,
+          ...pairState,
+        }));
       } catch (error) {
+        if (pairRequestIdRef.current === requestId) {
+          setLocalFinance((currentFinance) => ({
+            ...currentFinance,
+            orders: previousPairState?.orders ?? currentFinance.orders,
+            selectedPairSymbol: previousPairSymbol,
+            trades: previousPairState?.trades ?? currentFinance.trades,
+          }));
+        }
+
         toast.error(getErrorMessage(error, "Не удалось сменить пару."));
       }
-    });
+    })();
   }
 
   if (!selectedPair) {
@@ -194,7 +246,6 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
       <section className="bg-background min-w-0 overflow-hidden rounded-lg border">
         <div className="border-b px-4 py-3">
           <PairCarousel
-            isPending={isPairPending}
             mid={marketPrices.mid}
             onPairChange={handlePairChange}
             pairs={localFinance.marketPairs}

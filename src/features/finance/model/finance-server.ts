@@ -5,6 +5,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import { getPrisma } from "@/src/lib/db";
 import type {
   FinanceAsset,
+  FinancePairState,
   FinanceState,
   FinancialAccountItem,
   FinancialMarketPairItem,
@@ -550,6 +551,113 @@ function getNextStatus(amount: number, filledAmount: number) {
   return filledAmount > 0 ? ("PARTIALLY_FILLED" as const) : ("OPEN" as const);
 }
 
+async function getEnabledMarketPair(
+  prisma: PrismaClient,
+  selectedPairSymbol: string
+) {
+  const selectedPair = await prisma.financialMarketPair.findFirst({
+    where: {
+      enabled: true,
+      symbol: selectedPairSymbol,
+    },
+  });
+
+  if (selectedPair) {
+    return selectedPair;
+  }
+
+  return (
+    (await prisma.financialMarketPair.findFirst({
+      where: {
+        enabled: true,
+        symbol: DEFAULT_MARKET_PAIR_SYMBOL,
+      },
+    })) ??
+    prisma.financialMarketPair.findFirst({
+      where: { enabled: true },
+      orderBy: [{ sortOrder: "asc" }, { symbol: "asc" }],
+    })
+  );
+}
+
+async function getFinancePairStateForPair(
+  prisma: PrismaClient,
+  userId: string,
+  selectedPair: { id: string; symbol: string }
+): Promise<FinancePairState> {
+  const [openOrders, historyOrders, trades] = await Promise.all([
+    prisma.financialOrder.findMany({
+      where: {
+        pairId: selectedPair.id,
+        status: { in: ["OPEN", "PARTIALLY_FILLED"] },
+      },
+      include: {
+        acceptedBy: {
+          select: {
+            login: true,
+          },
+        },
+        creator: {
+          select: {
+            login: true,
+          },
+        },
+      },
+      orderBy: [{ side: "asc" }, { price: "desc" }, { createdAt: "asc" }],
+    }),
+    prisma.financialOrder.findMany({
+      where: {
+        creatorUserId: userId,
+        pairId: selectedPair.id,
+        status: { in: ["ACCEPTED", "CANCELLED"] },
+      },
+      include: {
+        acceptedBy: {
+          select: {
+            login: true,
+          },
+        },
+        creator: {
+          select: {
+            login: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: ORDER_HISTORY_LIMIT,
+    }),
+    prisma.financialTrade.findMany({
+      where: {
+        pairId: selectedPair.id,
+      },
+      orderBy: { executedAt: "desc" },
+      take: ORDER_HISTORY_LIMIT,
+    }),
+  ]);
+
+  return {
+    orders: [...openOrders, ...historyOrders].map((order) =>
+      mapOrder(order, userId)
+    ),
+    selectedPairSymbol: selectedPair.symbol,
+    trades: trades.map((trade) => mapTrade(trade, userId)),
+  };
+}
+
+export async function getFinancePairState(
+  userId: string,
+  selectedPairSymbol = DEFAULT_MARKET_PAIR_SYMBOL
+): Promise<FinancePairState> {
+  const prisma = getPrisma();
+  const selectedPair = await getEnabledMarketPair(prisma, selectedPairSymbol);
+
+  if (!selectedPair) {
+    throw new Error("Не настроены торговые пары.");
+  }
+
+  return getFinancePairStateForPair(prisma, userId, selectedPair);
+}
+
 export async function getFinanceState(
   userId: string,
   selectedPairSymbol = DEFAULT_MARKET_PAIR_SYMBOL
@@ -576,75 +684,25 @@ export async function getFinanceState(
     throw new Error("Не настроены торговые пары.");
   }
 
-  const [user, accounts, openOrders, historyOrders, trades] = await Promise.all(
-    [
-      prisma.user.findUniqueOrThrow({
-        where: { id: userId },
-        select: { login: true },
-      }),
-      prisma.financialAccount.findMany({
-        where: { userId },
-        orderBy: { asset: "asc" },
-      }),
-      prisma.financialOrder.findMany({
-        where: {
-          pairId: selectedPair.id,
-          status: { in: ["OPEN", "PARTIALLY_FILLED"] },
-        },
-        include: {
-          acceptedBy: {
-            select: {
-              login: true,
-            },
-          },
-          creator: {
-            select: {
-              login: true,
-            },
-          },
-        },
-        orderBy: [{ side: "asc" }, { price: "desc" }, { createdAt: "asc" }],
-      }),
-      prisma.financialOrder.findMany({
-        where: {
-          creatorUserId: userId,
-          pairId: selectedPair.id,
-          status: { in: ["ACCEPTED", "CANCELLED"] },
-        },
-        include: {
-          acceptedBy: {
-            select: {
-              login: true,
-            },
-          },
-          creator: {
-            select: {
-              login: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        take: ORDER_HISTORY_LIMIT,
-      }),
-      prisma.financialTrade.findMany({
-        where: {
-          pairId: selectedPair.id,
-        },
-        orderBy: { executedAt: "desc" },
-        take: ORDER_HISTORY_LIMIT,
-      }),
-    ]
-  );
+  const [user, accounts, pairState] = await Promise.all([
+    prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { login: true },
+    }),
+    prisma.financialAccount.findMany({
+      where: { userId },
+      orderBy: { asset: "asc" },
+    }),
+    getFinancePairStateForPair(prisma, userId, selectedPair),
+  ]);
 
   return {
     accounts: accounts.map((account) => mapAccount(account, user.login)),
     currentUserLogin: user.login,
     marketPairs: marketPairs.map(mapMarketPair),
-    orders: [...openOrders, ...historyOrders].map((order) =>
-      mapOrder(order, userId)
-    ),
-    selectedPairSymbol: selectedPair.symbol,
-    trades: trades.map((trade) => mapTrade(trade, userId)),
+    orders: pairState.orders,
+    selectedPairSymbol: pairState.selectedPairSymbol,
+    trades: pairState.trades,
   };
 }
 

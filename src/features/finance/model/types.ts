@@ -83,6 +83,11 @@ export type FinanceState = {
   trades: FinancialTradeItem[];
 };
 
+export type FinancePairState = Pick<
+  FinanceState,
+  "orders" | "selectedPairSymbol" | "trades"
+>;
+
 export function emptyFinanceState(): FinanceState {
   return {
     accounts: [],
