@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { RiTimeLine } from "@remixicon/react";
 import { toast } from "sonner";
 
@@ -136,29 +137,53 @@ function PairStats({
 
 export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
   const [localFinance, setLocalFinance] = React.useState(finance);
+  const [selectedPairSymbol, setSelectedPairSymbol] = React.useState(
+    finance.selectedPairSymbol
+  );
+  const [pairStateCache, setPairStateCache] = React.useState(
+    () =>
+      new Map<string, FinancePairState>([
+        [
+          finance.selectedPairSymbol,
+          {
+            orders: finance.orders,
+            selectedPairSymbol: finance.selectedPairSymbol,
+            trades: finance.trades,
+          },
+        ],
+      ])
+  );
   const [selectedPrice, setSelectedPrice] = React.useState<number | null>(null);
   const pairRequestIdRef = React.useRef(0);
-  const pairStateCacheRef = React.useRef(new Map<string, FinancePairState>());
 
   React.useEffect(() => {
     setLocalFinance(finance);
-    pairStateCacheRef.current = new Map([
-      [
-        finance.selectedPairSymbol,
-        {
-          orders: finance.orders,
-          selectedPairSymbol: finance.selectedPairSymbol,
-          trades: finance.trades,
-        },
-      ],
-    ]);
+    setSelectedPairSymbol(finance.selectedPairSymbol);
+    setPairStateCache(
+      new Map([
+        [
+          finance.selectedPairSymbol,
+          {
+            orders: finance.orders,
+            selectedPairSymbol: finance.selectedPairSymbol,
+            trades: finance.trades,
+          },
+        ],
+      ])
+    );
   }, [finance]);
 
   React.useEffect(() => {
-    pairStateCacheRef.current.set(localFinance.selectedPairSymbol, {
-      orders: localFinance.orders,
-      selectedPairSymbol: localFinance.selectedPairSymbol,
-      trades: localFinance.trades,
+    setPairStateCache((currentCache) => {
+      const nextCache = new Map(currentCache);
+
+      nextCache.set(localFinance.selectedPairSymbol, {
+        orders: localFinance.orders,
+        selectedPairSymbol: localFinance.selectedPairSymbol,
+        trades: localFinance.trades,
+      });
+
+      return nextCache;
     });
   }, [
     localFinance.orders,
@@ -166,15 +191,37 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
     localFinance.trades,
   ]);
 
+  function cachePairState(pairState: FinancePairState) {
+    setPairStateCache((currentCache) => {
+      const nextCache = new Map(currentCache);
+
+      nextCache.set(pairState.selectedPairSymbol, pairState);
+
+      return nextCache;
+    });
+  }
+
   const selectedPair =
     localFinance.marketPairs.find(
-      (pair) => pair.symbol === localFinance.selectedPairSymbol
+      (pair) => pair.symbol === selectedPairSymbol
     ) ?? localFinance.marketPairs[0];
-  const openOrders = localFinance.orders.filter(
+  const selectedPairState =
+    localFinance.selectedPairSymbol === selectedPairSymbol
+      ? {
+          orders: localFinance.orders,
+          selectedPairSymbol: localFinance.selectedPairSymbol,
+          trades: localFinance.trades,
+        }
+      : (pairStateCache.get(selectedPairSymbol) ?? {
+          orders: [],
+          selectedPairSymbol,
+          trades: [],
+        });
+  const openOrders = selectedPairState.orders.filter(
     (order) => order.status === "OPEN" || order.status === "PARTIALLY_FILLED"
   );
   const ownOpenOrders = openOrders.filter((order) => order.relation === "own");
-  const historyOrders = localFinance.orders.filter(
+  const historyOrders = selectedPairState.orders.filter(
     (order) =>
       order.relation === "own" &&
       order.status !== "OPEN" &&
@@ -183,51 +230,62 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
   const marketPrices = getOrderBookPrices(openOrders);
 
   function handlePairChange(symbol: string) {
-    if (symbol === localFinance.selectedPairSymbol) {
+    if (symbol === selectedPairSymbol) {
       return;
     }
 
-    setSelectedPrice(null);
-    const previousPairSymbol = localFinance.selectedPairSymbol;
-    const previousPairState = pairStateCacheRef.current.get(previousPairSymbol);
-    const cachedPairState = pairStateCacheRef.current.get(symbol);
+    const previousPairSymbol = selectedPairSymbol;
     const requestId = pairRequestIdRef.current + 1;
 
     pairRequestIdRef.current = requestId;
-    setLocalFinance((currentFinance) => ({
-      ...currentFinance,
-      orders: cachedPairState?.orders ?? [],
-      selectedPairSymbol: symbol,
-      trades: cachedPairState?.trades ?? [],
-    }));
+    flushSync(() => {
+      setSelectedPrice(null);
+      setSelectedPairSymbol(symbol);
+    });
 
-    void (async () => {
-      try {
-        const pairState = await getFinancePairStateAction(symbol);
-
-        if (pairRequestIdRef.current !== requestId) {
-          return;
-        }
-
-        pairStateCacheRef.current.set(pairState.selectedPairSymbol, pairState);
-        setLocalFinance((currentFinance) => ({
-          ...currentFinance,
-          ...pairState,
-        }));
-      } catch (error) {
-        if (pairRequestIdRef.current === requestId) {
-          setLocalFinance((currentFinance) => ({
-            ...currentFinance,
-            orders: previousPairState?.orders ?? currentFinance.orders,
-            selectedPairSymbol: previousPairSymbol,
-            trades: previousPairState?.trades ?? currentFinance.trades,
-          }));
-        }
-
-        toast.error(getErrorMessage(error, "Не удалось сменить пару."));
-      }
-    })();
+    window.setTimeout(() => {
+      void loadPairState(symbol, requestId, previousPairSymbol);
+    }, 0);
   }
+
+  async function loadPairState(
+    symbol: string,
+    requestId: number,
+    previousPairSymbol: string
+  ) {
+    try {
+      const pairState = await getFinancePairStateAction(symbol);
+
+      cachePairState(pairState);
+
+      if (pairRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setLocalFinance((currentFinance) => ({
+        ...currentFinance,
+        ...pairState,
+      }));
+    } catch (error) {
+      if (pairRequestIdRef.current === requestId) {
+        setSelectedPairSymbol(previousPairSymbol);
+      }
+
+      toast.error(getErrorMessage(error, "Не удалось сменить пару."));
+    }
+  }
+
+  function handleFinanceChange(nextFinance: FinanceState) {
+    cachePairState({
+      orders: nextFinance.orders,
+      selectedPairSymbol: nextFinance.selectedPairSymbol,
+      trades: nextFinance.trades,
+    });
+    setSelectedPairSymbol(nextFinance.selectedPairSymbol);
+    setLocalFinance(nextFinance);
+  }
+
+  const trades = selectedPairState.trades;
 
   if (!selectedPair) {
     return (
@@ -255,7 +313,7 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
         <PairStats
           orders={openOrders}
           pair={selectedPair}
-          tradesCount={localFinance.trades.length}
+          tradesCount={trades.length}
         />
 
         <div className="grid min-w-0 gap-0 xl:grid-cols-[22rem_minmax(0,1fr)_22rem]">
@@ -275,7 +333,7 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
             <SpotOrderPanel
               accounts={localFinance.accounts}
               marketPrices={marketPrices}
-              onFinanceChange={setLocalFinance}
+              onFinanceChange={handleFinanceChange}
               pair={selectedPair}
               selectedPrice={selectedPrice}
             />
@@ -283,7 +341,7 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
 
           <div className="order-3 min-w-0 p-3 xl:order-none">
             <div className="mb-2 text-sm font-semibold">Сделки рынка</div>
-            <RecentTrades pair={selectedPair} trades={localFinance.trades} />
+            <RecentTrades pair={selectedPair} trades={trades} />
           </div>
         </div>
       </section>
@@ -300,7 +358,7 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
           <TabsContent value="open" className="mt-3">
             <OrdersTable
               emptyTitle="Открытых заявок нет"
-              onFinanceChange={setLocalFinance}
+              onFinanceChange={handleFinanceChange}
               orders={ownOpenOrders}
             />
           </TabsContent>
@@ -310,7 +368,6 @@ export function FinanceWorkspace({ finance }: { finance: FinanceState }) {
               emptyTitle="История пуста"
               orders={historyOrders}
               pageSize={HISTORY_PAGE_SIZE}
-              showActions={false}
             />
           </TabsContent>
         </Tabs>

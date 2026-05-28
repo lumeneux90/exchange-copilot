@@ -94,7 +94,7 @@ export function emptyFinanceState(): FinanceState {
     currentUserLogin: "",
     marketPairs: [],
     orders: [],
-    selectedPairSymbol: "XCP/USDT",
+    selectedPairSymbol: "USD/RUB",
     trades: [],
   };
 }
