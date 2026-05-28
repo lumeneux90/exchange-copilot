@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:agents": "tsx prisma/seed-ai-market-agents.ts",
     "db:studio": "prisma studio",
     "db:validate": "prisma validate",
     "market:mode": "tsx scripts/check-market-mode.ts",
