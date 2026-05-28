@@ -28,6 +28,19 @@ export async function GET(request: NextRequest) {
 
   const result = await runAiMarketTick();
 
+  console.log(
+    "[market-cron]",
+    JSON.stringify({
+      cancelledOrdersCount: result.cancelledOrdersCount,
+      errors: result.errors,
+      llmError: result.llmError,
+      llmStatus: result.llmStatus,
+      mode: result.mode.mode,
+      modeSource: result.modeSource,
+      placedOrdersCount: result.placedOrdersCount,
+    })
+  );
+
   return NextResponse.json({
     ok: true,
     cancelledOrdersCount: result.cancelledOrdersCount,
