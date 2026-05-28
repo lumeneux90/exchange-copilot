@@ -1,4 +1,4 @@
-import { RiMoneyDollarCircleFill, RiTokenSwapFill } from "@remixicon/react";
+import { RiMoneyDollarCircleFill } from "@remixicon/react";
 
 import type { FinanceAsset } from "@/src/features/finance/model/types";
 import { cn } from "@/src/lib/utils";
@@ -19,13 +19,14 @@ export function isCryptoSpotAsset(asset: FinanceAsset) {
 }
 
 const cryptoLogoUrls: Partial<Record<FinanceAsset, string>> = {
-  BNB: "https://cryptologos.cc/logos/bnb-bnb-logo.svg?v=040",
-  BTC: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=040",
-  DOGE: "https://cryptologos.cc/logos/dogecoin-doge-logo.svg?v=040",
-  ETH: "https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=040",
-  SOL: "https://cryptologos.cc/logos/solana-sol-logo.svg?v=040",
-  TON: "https://cryptologos.cc/logos/toncoin-ton-logo.svg?v=040",
-  USDT: "https://cryptologos.cc/logos/tether-usdt-logo.svg?v=040",
+  BNB: "/crypto/bnb.svg",
+  BTC: "/crypto/btc.svg",
+  DOGE: "/crypto/doge.svg",
+  ETH: "/crypto/eth.svg",
+  SOL: "/crypto/sol.svg",
+  TON: "/crypto/ton.svg",
+  USDT: "/crypto/usdt.svg",
+  XCP: "/crypto/xcp.svg",
 };
 
 function getAssetIconTheme(asset: FinanceAsset) {
@@ -71,10 +72,8 @@ export function AssetIcon({
       )}
     >
       {logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Small remote SVG logos render better as plain decorative images.
+        // eslint-disable-next-line @next/next/no-img-element -- Small local decorative SVG icons do not need Next image optimization.
         <img src={logoUrl} alt="" className="size-5" loading="lazy" />
-      ) : asset === "XCP" ? (
-        <RiTokenSwapFill className="size-4" />
       ) : asset === "USD" || asset === "RUB" ? (
         <RiMoneyDollarCircleFill className="size-4" />
       ) : (
