@@ -363,6 +363,11 @@ export async function getPortfolioLeaderboard(
   const prisma = getPrisma();
   const pricesByTicker = new Map(stocks.map((stock) => [stock.ticker, stock]));
   const users = await prisma.user.findMany({
+    where: {
+      kind: {
+        not: "TREASURY",
+      },
+    },
     include: {
       portfolio: {
         include: {
