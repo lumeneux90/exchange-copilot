@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { flushSync } from "react-dom";
+import Image from "next/image";
 import { RiTimeLine } from "@remixicon/react";
 import { toast } from "sonner";
 
@@ -35,6 +36,71 @@ import { cn } from "@/src/lib/utils";
 
 const HISTORY_PAGE_SIZE = 8;
 
+const pairIconUrls: Partial<Record<string, string>> = {
+  "USD/RUB": "flag-overlap",
+};
+
+function PairIcon({
+  className,
+  pair,
+}: {
+  className?: string;
+  pair: FinancialMarketPairItem;
+}) {
+  const iconUrl = pairIconUrls[pair.symbol];
+
+  if (iconUrl === "flag-overlap") {
+    return (
+      <span
+        className={cn("relative block size-9 shrink-0", className)}
+        aria-hidden
+      >
+        <span className="ring-background absolute top-0 left-0 block size-[70%] overflow-hidden rounded-full ring-2">
+          <Image
+            src="/flags/us-round.svg"
+            alt=""
+            fill
+            sizes="32px"
+            className="object-cover"
+            unoptimized
+          />
+        </span>
+        <span className="ring-background absolute right-0 bottom-0 block size-[70%] overflow-hidden rounded-full ring-2">
+          <Image
+            src="/flags/ru-round.svg"
+            alt=""
+            fill
+            sizes="32px"
+            className="object-cover"
+            unoptimized
+          />
+        </span>
+      </span>
+    );
+  }
+
+  if (iconUrl) {
+    return (
+      <span
+        className={cn(
+          "grid size-9 shrink-0 place-items-center overflow-hidden rounded-full",
+          className
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- Small local decorative SVG icons do not need Next image optimization. */}
+        <img src={iconUrl} alt="" className="size-full" loading="lazy" />
+      </span>
+    );
+  }
+
+  return (
+    <AssetIcon
+      asset={pair.baseAsset === "USD" ? pair.quoteAsset : pair.baseAsset}
+      className={className}
+    />
+  );
+}
+
 function PairCarousel({
   mid,
   onPairChange,
@@ -67,12 +133,7 @@ function PairCarousel({
                 )}
                 onClick={() => onPairChange(pair.symbol)}
               >
-                <AssetIcon
-                  asset={
-                    pair.baseAsset === "USD" ? pair.quoteAsset : pair.baseAsset
-                  }
-                  className="size-8"
-                />
+                <PairIcon pair={pair} className="size-8" />
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold">
                     {pair.symbol}
