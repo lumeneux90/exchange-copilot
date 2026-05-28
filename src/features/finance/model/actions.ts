@@ -5,11 +5,13 @@ import { revalidatePath } from "next/cache";
 import {
   cancelFinancialOrder,
   createFinancialOrder,
+  getFinancePairState,
   getFinanceState,
 } from "@/src/features/finance/model/finance-server";
 import {
   emptyFinanceState,
   type FinanceState,
+  type FinancePairState,
   type FinancialOrderSide,
 } from "@/src/features/finance/model/types";
 import { getErrorMessage } from "@/src/lib/errors";
@@ -39,6 +41,22 @@ export async function getFinanceStateAction(
   }
 
   return getFinanceState(user.id, selectedPairSymbol);
+}
+
+export async function getFinancePairStateAction(
+  selectedPairSymbol?: string
+): Promise<FinancePairState> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return {
+      orders: [],
+      selectedPairSymbol: emptyFinanceState().selectedPairSymbol,
+      trades: [],
+    };
+  }
+
+  return getFinancePairState(user.id, selectedPairSymbol);
 }
 
 export async function createFinancialOrderAction(params: {
